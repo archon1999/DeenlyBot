@@ -6,7 +6,7 @@ from django.core.management import call_command
 from apps.content.models import Dua, Favorite, NameOfAllah, NameTranslation, QuranPassage
 from apps.content.services import localized_name, toggle_dua_favorite, toggle_passage_favorite
 from apps.islamic_calendar.models import IslamicEvent
-from apps.telegram_bot.handlers import _dua_list, _passage_list
+from apps.telegram_bot.handlers import _dua_list, _library_page_keyboard, _passage_list
 from apps.telegram_bot.rendering import render_name_card
 
 
@@ -43,6 +43,14 @@ def test_quran_and_dua_library_pages_have_ten_items():
 
     assert (len(quran_first), len(quran_second), quran_page, quran_pages) == (10, 6, 1, 2)
     assert (len(dua_first), len(dua_second), dua_page, dua_pages) == (10, 3, 1, 2)
+
+
+def test_library_pagination_callbacks_target_registered_sections():
+    quran_keyboard = _library_page_keyboard("ru", [(1, "Аят")], 1, 2, "passage")
+    dua_keyboard = _library_page_keyboard("ru", [(1, "Дуа")], 1, 2, "dua")
+
+    assert quran_keyboard.inline_keyboard[-2][-1].callback_data == "library:quran:2"
+    assert dua_keyboard.inline_keyboard[-2][-1].callback_data == "library:duas:2"
 
 
 @pytest.mark.django_db

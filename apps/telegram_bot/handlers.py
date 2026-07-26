@@ -276,9 +276,10 @@ def _library_page_keyboard(language, items, page, pages, kind):
         for pk, title in items
     ]
     navigation = []
+    section = {"passage": "quran", "dua": "duas"}[kind]
     if page > 1:
         navigation.append(
-            InlineKeyboardButton(text="⬅️", callback_data=f"library:{kind}:{page - 1}")
+            InlineKeyboardButton(text="⬅️", callback_data=f"library:{section}:{page - 1}")
         )
     navigation.append(
         InlineKeyboardButton(
@@ -288,7 +289,7 @@ def _library_page_keyboard(language, items, page, pages, kind):
     )
     if page < pages:
         navigation.append(
-            InlineKeyboardButton(text="➡️", callback_data=f"library:{kind}:{page + 1}")
+            InlineKeyboardButton(text="➡️", callback_data=f"library:{section}:{page + 1}")
         )
     rows.append(navigation)
     rows.append([back_to_library_button(language)])
@@ -564,7 +565,9 @@ async def qada_done(callback: CallbackQuery, db_user):
 @router.message(Command("calendar"))
 @router.message(lambda message: message.text in _button_values("calendar"))
 async def calendar_handler(message: Message, db_user):
-    events = await sync_to_async(upcoming_events)(db_user.language, days=180)
+    # A 400-day window always covers a complete Hijri cycle, even when the next
+    # seeded occasion is more than six Gregorian months away.
+    events = await sync_to_async(upcoming_events)(db_user.language, days=400)
     if not events:
         await message.answer(t(db_user.language, "calendar_empty"))
         return

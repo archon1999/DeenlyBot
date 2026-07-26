@@ -1,6 +1,7 @@
 from datetime import date
 
 import pytest
+from django.core.management import call_command
 from hijridate import Hijri
 
 from apps.islamic_calendar.models import CalendarCorrection, EventTranslation, IslamicEvent
@@ -27,3 +28,10 @@ def test_upcoming_hijri_event_and_manual_correction():
     )
     assert occurrence_date(event, current.year) == (corrected, False)
     assert upcoming_events("ru", from_date=corrected, days=1)[0].title == "Событие"
+
+
+@pytest.mark.django_db
+def test_seeded_calendar_has_an_event_within_full_hijri_cycle():
+    call_command("seed_content", verbosity=0)
+
+    assert upcoming_events("ru", from_date=date.today(), days=400)
