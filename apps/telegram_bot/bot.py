@@ -1,5 +1,6 @@
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from django.conf import settings
 
@@ -11,7 +12,12 @@ from .middleware import TelegramUserMiddleware
 def create_bot():
     if not settings.BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN is not configured")
-    return Bot(token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    session = AiohttpSession(proxy=settings.TELEGRAM_PROXY) if settings.TELEGRAM_PROXY else None
+    return Bot(
+        token=settings.BOT_TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        session=session,
+    )
 
 
 def create_dispatcher():

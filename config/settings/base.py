@@ -90,6 +90,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+TELEGRAM_PROXY = os.getenv("TELEGRAM_PROXY", "").strip()
 PERSONAL_BOT_MODE = os.getenv("PERSONAL_BOT_MODE", "True").lower() in {"1", "true", "yes"}
 BOT_OWNER_TELEGRAM_ID = (
     int(os.environ["BOT_OWNER_TELEGRAM_ID"]) if os.getenv("BOT_OWNER_TELEGRAM_ID") else None

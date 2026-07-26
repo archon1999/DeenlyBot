@@ -26,6 +26,7 @@
 ```bash
 cp .env.example .env
 # Заполните BOT_TOKEN и при желании BOT_OWNER_TELEGRAM_ID в .env
+# Если сервер не имеет прямого доступа к Telegram API, задайте TELEGRAM_PROXY
 docker compose up -d --build
 ```
 
