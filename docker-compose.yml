@@ -1,0 +1,52 @@
+x-deenly-service: &deenly-service
+  build:
+    context: .
+  image: deenly-bot:local
+  env_file:
+    - .env
+  environment:
+    DJANGO_SETTINGS_MODULE: config.settings.docker
+    SQLITE_PATH: /data/db.sqlite3
+  volumes:
+    - deenly_data:/data
+  restart: unless-stopped
+
+services:
+  migrate:
+    <<: *deenly-service
+    command: >-
+      sh -c "python manage.py migrate --noinput &&
+      python manage.py bootstrap_bot &&
+      python manage.py collectstatic --noinput"
+    restart: "no"
+
+  web:
+    <<: *deenly-service
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 60
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  bot:
+    <<: *deenly-service
+    command: python manage.py runbot
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    <<: *deenly-service
+    command: python manage.py qcluster
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  deenly_data:
