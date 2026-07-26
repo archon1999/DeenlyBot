@@ -6,6 +6,7 @@ from apps.users.models import TelegramUser
 
 class NotificationKind(models.TextChoices):
     REVIEW = "review", "Learning review"
+    ARABIC_REVIEW = "arabic_review", "Arabic review"
     QURAN = "quran", "Quran passage"
     DUA = "dua", "Dua"
     QADA = "qada", "Qada reminder"

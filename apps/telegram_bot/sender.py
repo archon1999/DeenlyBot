@@ -1,7 +1,10 @@
 from html import escape
 
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from asgiref.sync import sync_to_async
 
+from apps.arabic_learning.models import ArabicLearningItem
+from apps.arabic_learning.services import build_arabic_quiz, select_arabic_review_target
 from apps.content.models import Dua, QuranPassage
 from apps.content.services import localized_name
 from apps.islamic_calendar.models import IslamicEvent
@@ -11,9 +14,10 @@ from apps.notifications.models import NotificationKind
 from apps.notifications.services import build_weekly_report
 from apps.worship.services import balances_for_user
 
+from .arabic_rendering import render_arabic_quiz
 from .bot import create_bot
 from .i18n import t
-from .keyboards import quiz_keyboard, reveal_keyboard
+from .keyboards import arabic_quiz_keyboard, quiz_keyboard, reveal_keyboard
 from .rendering import render_quiz
 
 
@@ -37,6 +41,32 @@ def _prepare_review(user):
         )
     question = build_quiz(user)
     return render_quiz(user, question), quiz_keyboard(question)
+
+
+def _prepare_arabic_review(user):
+    count = user.arabic_item_progress.count()
+    if not count:
+        return t(user.language, "arabic_no_progress"), None
+    if count < 4:
+        progress = select_arabic_review_target(user)
+        item = ArabicLearningItem.objects.prefetch_related("translations").get(
+            id=progress.item_id
+        )
+        return (
+            t(user.language, "arabic_recall", arabic=escape(item.arabic_text)),
+            InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text=t(user.language, "arabic_show_answer"),
+                            callback_data=f"arabic:reveal:{item.id}",
+                        )
+                    ]
+                ]
+            ),
+        )
+    question = build_arabic_quiz(user)
+    return render_arabic_quiz(user, question), arabic_quiz_keyboard(question)
 
 
 def _prepare_passage(user):
@@ -115,6 +145,11 @@ async def send_scheduled_notification(notification):
     if notification.kind == NotificationKind.REVIEW:
         body, keyboard = await sync_to_async(_prepare_review, thread_sensitive=True)(user)
         text = f"{t(user.language, 'notification_review')}\n\n{body}"
+    elif notification.kind == NotificationKind.ARABIC_REVIEW:
+        body, keyboard = await sync_to_async(_prepare_arabic_review, thread_sensitive=True)(
+            user
+        )
+        text = f"{t(user.language, 'arabic_notification')}\n\n{body}"
     elif notification.kind == NotificationKind.QURAN:
         body = await sync_to_async(_prepare_passage, thread_sensitive=True)(user)
         text = f"{t(user.language, 'notification_quran')}\n\n{body}"

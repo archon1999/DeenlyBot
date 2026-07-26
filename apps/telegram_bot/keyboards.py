@@ -11,7 +11,10 @@ from .i18n import t
 def main_menu(language):
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text=t(language, "learn")), KeyboardButton(text=t(language, "review"))],
+            [
+                KeyboardButton(text=t(language, "names")),
+                KeyboardButton(text=t(language, "arabic")),
+            ],
             [KeyboardButton(text=t(language, "library")), KeyboardButton(text=t(language, "qada"))],
             [
                 KeyboardButton(text=t(language, "calendar")),
@@ -23,6 +26,131 @@ def main_menu(language):
             ],
         ],
         resize_keyboard=True,
+    )
+
+
+def names_section_keyboard(language):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t(language, "names_continue"), callback_data="names:learn"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t(language, "names_review"), callback_data="names:review"
+                ),
+                InlineKeyboardButton(
+                    text=t(language, "names_studied"), callback_data="names:list:1"
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t(language, "names_progress"), callback_data="names:progress"
+                )
+            ],
+        ]
+    )
+
+
+def name_candidate_keyboard(language, name_id):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t(language, "name_mark_studied"),
+                    callback_data=f"names:complete:{name_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t(language, "back_to_names"), callback_data="names:home"
+                )
+            ],
+        ]
+    )
+
+
+def arabic_dashboard_keyboard(language):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t(language, "arabic_alphabet"),
+                    callback_data="arabic:category:alphabet:1",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t(language, "arabic_vocabulary"),
+                    callback_data="arabic:category:quran_vocabulary:1",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t(language, "arabic_grammar"),
+                    callback_data="arabic:category:grammar:1",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t(language, "arabic_review"), callback_data="arabic:review"
+                ),
+                InlineKeyboardButton(
+                    text=t(language, "arabic_progress"), callback_data="arabic:progress"
+                ),
+            ],
+        ]
+    )
+
+
+def arabic_lesson_keyboard(language, lesson_id, category, page):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t(language, "arabic_complete_lesson"),
+                    callback_data=f"arabic:complete:{lesson_id}:{category}:{page}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t(language, "arabic_back_category"),
+                    callback_data=f"arabic:category:{category}:{page}",
+                )
+            ],
+        ]
+    )
+
+
+def arabic_quiz_keyboard(question):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text=option["label"], callback_data=f"aq:{question.id}:{index}")]
+            for index, option in enumerate(question.options)
+        ]
+    )
+
+
+def arabic_quiz_result_keyboard(language, question):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t(language, "arabic_again"), callback_data=f"arabic:again:{question.id}"
+                ),
+                InlineKeyboardButton(
+                    text=t(language, "arabic_continue_review"),
+                    callback_data="arabic:review",
+                ),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t(language, "arabic_back"), callback_data="arabic:home"
+                )
+            ],
+        ]
     )
 
 
@@ -44,6 +172,13 @@ def quiz_keyboard(question):
             [InlineKeyboardButton(text=option["label"], callback_data=f"qa:{question.id}:{index}")]
             for index, option in enumerate(question.options)
         ]
+        + [
+            [
+                InlineKeyboardButton(
+                    text=t(question.language, "back_to_names"), callback_data="names:home"
+                )
+            ]
+        ]
     )
 
 
@@ -61,6 +196,11 @@ def quiz_result_keyboard(language, question):
                     text=t(language, "details"), callback_data=f"name:{question.target_name_id}"
                 )
             ],
+            [
+                InlineKeyboardButton(
+                    text=t(language, "back_to_names"), callback_data="names:home"
+                )
+            ],
         ]
     )
 
@@ -68,7 +208,12 @@ def quiz_result_keyboard(language, question):
 def reveal_keyboard(language, name_id):
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=t(language, "show_answer"), callback_data=f"name:{name_id}")]
+            [InlineKeyboardButton(text=t(language, "show_answer"), callback_data=f"name:{name_id}")],
+            [
+                InlineKeyboardButton(
+                    text=t(language, "back_to_names"), callback_data="names:home"
+                )
+            ],
         ]
     )
 

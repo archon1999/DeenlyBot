@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.content",
     "apps.learning",
+    "apps.arabic_learning",
     "apps.worship",
     "apps.islamic_calendar",
     "apps.notifications",

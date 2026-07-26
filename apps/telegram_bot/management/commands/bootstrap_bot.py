@@ -9,5 +9,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         call_command("seed_content")
+        call_command("seed_arabic")
         ensure_schedules()
         self.stdout.write(self.style.SUCCESS("Content and schedules are ready"))

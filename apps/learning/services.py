@@ -1,42 +1,52 @@
 import random
-from datetime import timedelta
 
 from django.db import transaction
 from django.utils import timezone
 
 from apps.content.models import NameOfAllah
 from apps.content.services import localized_name
+from apps.core.spaced_repetition import first_review_at, reviewed_schedule
 
 from .models import LearningStatus, QuizAttempt, QuizQuestion, QuizType, UserNameProgress
 
-REVIEW_INTERVALS = [
-    timedelta(minutes=10),
-    timedelta(days=1),
-    timedelta(days=3),
-    timedelta(days=7),
-    timedelta(days=14),
-    timedelta(days=30),
-]
+
+def next_name_for_user(user):
+    """Return the next sequential Name without changing user progress."""
+    introduced_ids = UserNameProgress.objects.filter(user=user).values_list("name_id", flat=True)
+    return (
+        NameOfAllah.objects.filter(is_published=True)
+        .exclude(id__in=introduced_ids)
+        .prefetch_related("translations")
+        .order_by("order")
+        .first()
+    )
+
+
+@transaction.atomic
+def confirm_name_studied(user, name_id):
+    """Confirm exactly the next Name and schedule its first review."""
+    existing = UserNameProgress.objects.filter(user=user, name_id=name_id).first()
+    if existing:
+        return existing.name, existing, False
+    expected = next_name_for_user(user)
+    if not expected or expected.id != name_id:
+        raise ValueError("Only the next sequential Name can be confirmed")
+    now = timezone.now()
+    progress = UserNameProgress.objects.create(
+        user=user,
+        name=expected,
+        introduced_at=now,
+        next_review_at=first_review_at(now),
+    )
+    return expected, progress, True
 
 
 @transaction.atomic
 def introduce_next_name(user):
-    introduced_ids = UserNameProgress.objects.filter(user=user).values_list("name_id", flat=True)
-    name = (
-        NameOfAllah.objects.filter(is_published=True)
-        .exclude(id__in=introduced_ids)
-        .order_by("order")
-        .first()
-    )
+    name = next_name_for_user(user)
     if not name:
         return None, None
-    now = timezone.now()
-    progress = UserNameProgress.objects.create(
-        user=user,
-        name=name,
-        introduced_at=now,
-        next_review_at=now + REVIEW_INTERVALS[0],
-    )
+    _, progress, _ = confirm_name_studied(user, name.id)
     return name, progress
 
 
@@ -137,15 +147,17 @@ def answer_quiz(question_id, user, selected_option):
         progress.correct_answers += 1
         progress.correct_streak += 1
         if not question.is_extra_practice:
-            progress.review_stage = min(progress.review_stage + 1, len(REVIEW_INTERVALS) - 1)
-            progress.next_review_at = timezone.now() + REVIEW_INTERVALS[progress.review_stage]
+            progress.review_stage, progress.next_review_at = reviewed_schedule(
+                progress.review_stage, True
+            )
         if progress.correct_streak >= 4 and progress.review_stage >= 3:
             progress.status = LearningStatus.LEARNED
     else:
         progress.correct_streak = 0
         if not question.is_extra_practice:
-            progress.review_stage = max(0, progress.review_stage - 1)
-            progress.next_review_at = timezone.now() + REVIEW_INTERVALS[0]
+            progress.review_stage, progress.next_review_at = reviewed_schedule(
+                progress.review_stage, False
+            )
         progress.status = LearningStatus.LEARNING
     progress.save()
     return question, True

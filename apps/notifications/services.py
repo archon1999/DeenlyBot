@@ -5,6 +5,12 @@ from zoneinfo import ZoneInfo
 from django.db import models
 from django.utils import timezone
 
+from apps.arabic_learning.models import (
+    ArabicProgressStatus,
+    ArabicQuizAttempt,
+    UserArabicItemProgress,
+    UserArabicLessonProgress,
+)
 from apps.islamic_calendar.services import upcoming_events
 from apps.learning.models import QuizAttempt, UserNameProgress
 from apps.worship.models import WorshipEntry, WorshipKind
@@ -29,6 +35,8 @@ def plan_daily_for_user(user, local_day=None):
     kinds = [NotificationKind.QURAN, NotificationKind.DUA]
     if UserNameProgress.objects.filter(user=user).exists():
         kinds.append(NotificationKind.REVIEW)
+    if UserArabicItemProgress.objects.filter(user=user).exists():
+        kinds.append(NotificationKind.ARABIC_REVIEW)
     balances = balances_for_user(user)
     if balances["fast"] or any(balances["prayers"].values()):
         kinds.append(NotificationKind.QADA)
@@ -91,6 +99,17 @@ def build_weekly_report(user, period_end=None):
         user=user, introduced_at__gte=start_dt, introduced_at__lt=end_dt
     ).count()
     learned = UserNameProgress.objects.filter(user=user, status="learned").count()
+    arabic_attempts = ArabicQuizAttempt.objects.filter(
+        user=user, created_at__gte=start_dt, created_at__lt=end_dt
+    )
+    arabic_total = arabic_attempts.count()
+    arabic_correct = arabic_attempts.filter(is_correct=True).count()
+    arabic_lessons_completed = UserArabicLessonProgress.objects.filter(
+        user=user,
+        status=ArabicProgressStatus.COMPLETED,
+        completed_at__gte=start_dt,
+        completed_at__lt=end_dt,
+    ).count()
     prayer_completed = abs(
         WorshipEntry.objects.filter(
             user=user,
@@ -118,6 +137,12 @@ def build_weekly_report(user, period_end=None):
         "reviews": total,
         "correct": correct,
         "accuracy": round(correct * 100 / total) if total else 0,
+        "arabic_lessons_completed": arabic_lessons_completed,
+        "arabic_items_total": UserArabicItemProgress.objects.filter(user=user).count(),
+        "arabic_reviews": arabic_total,
+        "arabic_accuracy": (
+            round(arabic_correct * 100 / arabic_total) if arabic_total else 0
+        ),
         "prayer_completed": prayer_completed,
         "fast_completed": fast_completed,
         "favorites_added": favorites_added,

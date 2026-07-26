@@ -1,10 +1,13 @@
+from datetime import datetime, timedelta
 from html import escape
+from zoneinfo import ZoneInfo
 
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from asgiref.sync import sync_to_async
 from django.db.models import Sum
+from django.utils import timezone
 
 from apps.content.models import Dua, Favorite, NameOfAllah, QuranPassage
 from apps.content.services import localized_name, toggle_dua_favorite, toggle_passage_favorite
@@ -13,7 +16,8 @@ from apps.learning.models import LearningStatus, QuizQuestion, UserNameProgress
 from apps.learning.services import (
     answer_quiz,
     build_quiz,
-    introduce_next_name,
+    confirm_name_studied,
+    next_name_for_user,
     select_review_target,
 )
 from apps.users.services import set_language
@@ -26,6 +30,8 @@ from .keyboards import (
     language_keyboard,
     library_keyboard,
     main_menu,
+    name_candidate_keyboard,
+    names_section_keyboard,
     quiz_keyboard,
     quiz_result_keyboard,
     reveal_keyboard,
@@ -71,27 +77,110 @@ async def language_callback(callback: CallbackQuery, db_user):
     await callback.message.answer(t(language, "menu"), reply_markup=main_menu(language))
 
 
-def _introduce(user):
-    name, _ = introduce_next_name(user)
-    if name:
-        name = (
-            NameOfAllah.objects.select_related("source")
-            .prefetch_related("translations")
-            .get(id=name.id)
-        )
-    return name
+def _names_dashboard_data(user):
+    progress = UserNameProgress.objects.filter(user=user)
+    now = timezone.now()
+    user_tz = ZoneInfo(user.timezone)
+    local_day = now.astimezone(user_tz).date()
+    day_start = datetime.combine(local_day, datetime.min.time(), tzinfo=user_tz)
+    day_end = day_start + timedelta(days=1)
+    next_name = next_name_for_user(user)
+    next_label = t(user.language, "names_finished")
+    if next_name:
+        translation = localized_name(next_name, user.language)
+        next_label = translation.transcription or next_name.transliteration
+    return {
+        "introduced": progress.count(),
+        "total": NameOfAllah.objects.filter(is_published=True).count(),
+        "today": progress.filter(
+            introduced_at__gte=day_start, introduced_at__lt=day_end
+        ).count(),
+        "due": progress.filter(next_review_at__lte=now).count(),
+        "next_name": next_label,
+    }
 
 
+def _render_names_dashboard(user, data):
+    return t(user.language, "names_section", **data)
+
+
+async def send_names_section(message, user, *, edit=False, prefix=None):
+    data = await sync_to_async(_names_dashboard_data, thread_sensitive=True)(user)
+    body = _render_names_dashboard(user, data)
+    if prefix:
+        body = f"{prefix}\n\n{body}"
+    method = message.edit_text if edit else message.answer
+    await method(body, reply_markup=names_section_keyboard(user.language))
+
+
+@router.message(Command("names"))
 @router.message(Command("learn"))
+@router.message(Command("review"))
+@router.message(lambda message: message.text in _button_values("names"))
 @router.message(lambda message: message.text in _button_values("learn"))
-async def learn_handler(message: Message, db_user):
-    name = await sync_to_async(_introduce, thread_sensitive=True)(db_user)
+@router.message(lambda message: message.text in _button_values("review"))
+async def names_handler(message: Message, db_user):
+    await send_names_section(message, db_user)
+
+
+@router.callback_query(F.data == "names:home")
+async def names_home_callback(callback: CallbackQuery, db_user):
+    await callback.answer()
+    await send_names_section(callback.message, db_user, edit=True)
+
+
+def _next_name_card(user):
+    name = next_name_for_user(user)
     if not name:
-        await message.answer(t(db_user.language, "all_names_introduced"))
-        return
-    await message.answer(
-        f"<b>{t(db_user.language, 'new_name')}</b>\n\n{render_name_card(db_user, name)}"
+        return None
+    return (
+        NameOfAllah.objects.select_related("source")
+        .prefetch_related("translations")
+        .get(id=name.id)
     )
+
+
+@router.callback_query(F.data == "names:learn")
+async def names_learn_callback(callback: CallbackQuery, db_user):
+    name = await sync_to_async(_next_name_card, thread_sensitive=True)(db_user)
+    await callback.answer()
+    if not name:
+        await send_names_section(
+            callback.message,
+            db_user,
+            edit=True,
+            prefix=t(db_user.language, "all_names_introduced"),
+        )
+        return
+    await callback.message.edit_text(
+        f"<b>{t(db_user.language, 'new_name')}</b>\n\n{render_name_card(db_user, name)}",
+        reply_markup=name_candidate_keyboard(db_user.language, name.id),
+    )
+
+
+def _confirm_name(user, name_id):
+    name, _, created = confirm_name_studied(user, name_id)
+    name = NameOfAllah.objects.prefetch_related("translations").get(id=name.id)
+    translation = localized_name(name, user.language)
+    return translation.transcription or name.transliteration, created
+
+
+@router.callback_query(F.data.startswith("names:complete:"))
+async def names_complete_callback(callback: CallbackQuery, db_user):
+    try:
+        label, created = await sync_to_async(_confirm_name, thread_sensitive=True)(
+            db_user, int(callback.data.rsplit(":", 1)[1])
+        )
+    except ValueError:
+        await callback.answer(t(db_user.language, "name_already_studied"), show_alert=True)
+        return
+    await callback.answer()
+    prefix = t(
+        db_user.language,
+        "name_studied" if created else "name_already_studied",
+        **({"name": escape(label)} if created else {}),
+    )
+    await send_names_section(callback.message, db_user, edit=True, prefix=prefix)
 
 
 def _review_data(user, target_id=None, *, extra=False, exclude_type=None):
@@ -112,15 +201,32 @@ def _review_data(user, target_id=None, *, extra=False, exclude_type=None):
     return "quiz", question
 
 
-async def send_review(message, user, target_id=None, *, extra=False, exclude_type=None):
+async def send_review(
+    message, user, target_id=None, *, extra=False, exclude_type=None, edit=False
+):
     kind, value = await sync_to_async(_review_data, thread_sensitive=True)(
         user, target_id, extra=extra, exclude_type=exclude_type
     )
+    method = message.edit_text if edit else message.answer
     if kind == "empty":
-        await message.answer(t(user.language, "no_progress"))
+        keyboard = (
+            InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text=t(user.language, "back_to_names"),
+                            callback_data="names:home",
+                        )
+                    ]
+                ]
+            )
+            if edit
+            else None
+        )
+        await method(t(user.language, "no_progress"), reply_markup=keyboard)
     elif kind == "reveal":
         name, transcription = value
-        await message.answer(
+        await method(
             t(
                 user.language,
                 "review_intro",
@@ -131,19 +237,19 @@ async def send_review(message, user, target_id=None, *, extra=False, exclude_typ
             reply_markup=reveal_keyboard(user.language, name.id),
         )
     else:
-        await message.answer(render_quiz(user, value), reply_markup=quiz_keyboard(value))
+        await method(render_quiz(user, value), reply_markup=quiz_keyboard(value))
 
 
-@router.message(Command("review"))
-@router.message(lambda message: message.text in _button_values("review"))
-async def review_handler(message: Message, db_user):
-    await send_review(message, db_user)
+@router.callback_query(F.data == "names:review")
+async def names_review_callback(callback: CallbackQuery, db_user):
+    await callback.answer()
+    await send_review(callback.message, db_user, edit=True)
 
 
 @router.callback_query(F.data == "review:next")
 async def review_next(callback: CallbackQuery, db_user):
     await callback.answer()
-    await send_review(callback.message, db_user)
+    await send_review(callback.message, db_user, edit=True)
 
 
 def _answer(question_id, user, selected):
@@ -186,6 +292,7 @@ async def quiz_again(callback: CallbackQuery, db_user):
         original.target_name_id,
         extra=True,
         exclude_type=original.quiz_type,
+        edit=True,
     )
 
 
@@ -201,7 +308,18 @@ def _name_by_id(name_id):
 async def name_details(callback: CallbackQuery, db_user):
     name = await sync_to_async(_name_by_id)(int(callback.data.split(":", 1)[1]))
     await callback.answer()
-    await callback.message.answer(render_name_card(db_user, name))
+    await callback.message.edit_text(
+        render_name_card(db_user, name),
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=t(db_user.language, "back_to_names"), callback_data="names:home"
+                    )
+                ]
+            ]
+        ),
+    )
 
 
 def _progress(user):
@@ -215,21 +333,139 @@ def _progress(user):
     return introduced, total, learned, answers, accuracy
 
 
+def _progress_text(user):
+    introduced, total, learned, answers, accuracy = _progress(user)
+    return t(
+        user.language,
+        "progress_text",
+        introduced=introduced,
+        total=total,
+        learned=learned,
+        answers=answers,
+        accuracy=accuracy,
+    )
+
+
+@router.callback_query(F.data == "names:progress")
+async def names_progress_callback(callback: CallbackQuery, db_user):
+    text = await sync_to_async(_progress_text)(db_user)
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t(db_user.language, "back_to_names"), callback_data="names:home"
+                )
+            ]
+        ]
+    )
+    await callback.answer()
+    await callback.message.edit_text(text, reply_markup=keyboard)
+
+
+def _studied_names_page(user, page):
+    queryset = (
+        UserNameProgress.objects.filter(user=user)
+        .select_related("name")
+        .prefetch_related("name__translations")
+        .order_by("name__order")
+    )
+    total = queryset.count()
+    pages = max(1, (total + LIBRARY_PAGE_SIZE - 1) // LIBRARY_PAGE_SIZE)
+    page = min(max(1, page), pages)
+    start = (page - 1) * LIBRARY_PAGE_SIZE
+    items = []
+    for progress in queryset[start : start + LIBRARY_PAGE_SIZE]:
+        translation = localized_name(progress.name, user.language)
+        items.append(
+            (
+                progress.name_id,
+                f"#{progress.name.order} {translation.transcription or progress.name.transliteration}",
+            )
+        )
+    return items, page, pages
+
+
+def _studied_names_keyboard(language, items, page, pages):
+    rows = [
+        [
+            InlineKeyboardButton(
+                text=label, callback_data=f"names:item:{name_id}:{page}"
+            )
+        ]
+        for name_id, label in items
+    ]
+    navigation = []
+    if page > 1:
+        navigation.append(
+            InlineKeyboardButton(text="⬅️", callback_data=f"names:list:{page - 1}")
+        )
+    navigation.append(
+        InlineKeyboardButton(
+            text=t(language, "page_indicator", page=page, pages=pages),
+            callback_data="library:noop",
+        )
+    )
+    if page < pages:
+        navigation.append(
+            InlineKeyboardButton(text="➡️", callback_data=f"names:list:{page + 1}")
+        )
+    rows.append(navigation)
+    rows.append(
+        [InlineKeyboardButton(text=t(language, "back_to_names"), callback_data="names:home")]
+    )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+@router.callback_query(F.data.startswith("names:list:"))
+async def names_list_callback(callback: CallbackQuery, db_user):
+    page = int(callback.data.rsplit(":", 1)[1])
+    items, page, pages = await sync_to_async(_studied_names_page)(db_user, page)
+    await callback.answer()
+    if not items:
+        await callback.message.edit_text(
+            t(db_user.language, "names_list_empty"),
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [
+                        InlineKeyboardButton(
+                            text=t(db_user.language, "back_to_names"),
+                            callback_data="names:home",
+                        )
+                    ]
+                ]
+            ),
+        )
+        return
+    await callback.message.edit_text(
+        t(db_user.language, "names_list_title", page=page, pages=pages),
+        reply_markup=_studied_names_keyboard(db_user.language, items, page, pages),
+    )
+
+
+@router.callback_query(F.data.startswith("names:item:"))
+async def names_item_callback(callback: CallbackQuery, db_user):
+    _, _, name_id, page = callback.data.split(":")
+    name = await sync_to_async(_name_by_id)(int(name_id))
+    await callback.answer()
+    await callback.message.edit_text(
+        render_name_card(db_user, name),
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=t(db_user.language, "back"),
+                        callback_data=f"names:list:{page}",
+                    )
+                ]
+            ]
+        ),
+    )
+
+
 @router.message(Command("progress"))
 @router.message(lambda message: message.text in _button_values("progress"))
 async def progress_handler(message: Message, db_user):
-    introduced, total, learned, answers, accuracy = await sync_to_async(_progress)(db_user)
-    await message.answer(
-        t(
-            db_user.language,
-            "progress_text",
-            introduced=introduced,
-            total=total,
-            learned=learned,
-            answers=answers,
-            accuracy=accuracy,
-        )
-    )
+    await message.answer(await sync_to_async(_progress_text)(db_user))
 
 
 @router.message(Command("library"))

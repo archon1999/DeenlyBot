@@ -1,4 +1,4 @@
-from apps.telegram_bot.keyboards import back_to_library_button
+from apps.telegram_bot.keyboards import back_to_library_button, main_menu, names_section_keyboard
 from apps.telegram_bot.profile import BOT_PROFILES, commands_for
 
 
@@ -10,8 +10,21 @@ def test_bot_profile_respects_telegram_limits_and_is_localized():
         assert len(profile["description"]) <= 512
         commands = commands_for(language)
         assert 1 <= len(commands) <= 100
-        assert {command.command for command in commands} >= {"start", "help", "settings"}
+        command_names = {command.command for command in commands}
+        assert command_names >= {"start", "names", "arabic", "help", "settings"}
+        assert command_names.isdisjoint({"learn", "review"})
 
 
 def test_library_back_button_targets_library_home():
     assert back_to_library_button("ru").callback_data == "library:home"
+
+
+def test_main_menu_has_unified_names_and_arabic_sections():
+    first_row = main_menu("ru").keyboard[0]
+    assert [button.text for button in first_row] == ["✨ 99 имён Аллаха", "🔤 Арабский язык"]
+    callbacks = {
+        button.callback_data
+        for row in names_section_keyboard("ru").inline_keyboard
+        for button in row
+    }
+    assert callbacks >= {"names:learn", "names:review", "names:list:1", "names:progress"}

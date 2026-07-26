@@ -5,7 +5,14 @@ import pytest
 from django.utils import timezone
 
 from apps.learning.models import QuizAttempt, QuizType, UserNameProgress
-from apps.learning.services import answer_quiz, build_quiz, introduce_next_name
+from apps.learning.services import (
+    answer_quiz,
+    build_quiz,
+    confirm_name_studied,
+    introduce_next_name,
+    next_name_for_user,
+)
+from apps.telegram_bot.handlers import _names_dashboard_data
 
 
 @pytest.mark.django_db
@@ -13,6 +20,35 @@ def test_names_are_introduced_in_strict_order(user, four_names):
     first, _ = introduce_next_name(user)
     second, _ = introduce_next_name(user)
     assert (first.order, second.order) == (1, 2)
+
+
+@pytest.mark.django_db
+def test_opening_next_name_does_not_change_progress(user, four_names):
+    first = next_name_for_user(user)
+    same_first = next_name_for_user(user)
+
+    assert first == same_first == four_names[0]
+    assert UserNameProgress.objects.filter(user=user).count() == 0
+    dashboard = _names_dashboard_data(user)
+    assert dashboard["introduced"] == 0
+    assert dashboard["next_name"] == "Name 1"
+    assert UserNameProgress.objects.filter(user=user).count() == 0
+
+
+@pytest.mark.django_db
+def test_name_is_added_only_after_explicit_sequential_confirmation(user, four_names):
+    with pytest.raises(ValueError):
+        confirm_name_studied(user, four_names[1].id)
+
+    name, progress, created = confirm_name_studied(user, four_names[0].id)
+    assert created is True
+    assert name == four_names[0]
+    assert progress.name == four_names[0]
+    assert next_name_for_user(user) == four_names[1]
+
+    _, same_progress, created_again = confirm_name_studied(user, four_names[0].id)
+    assert created_again is False
+    assert same_progress == progress
 
 
 @pytest.mark.django_db

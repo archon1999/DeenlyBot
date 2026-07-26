@@ -5,6 +5,8 @@ import pytest
 from django.utils import timezone
 from hijridate import Hijri
 
+from apps.arabic_learning.models import ArabicLesson, ArabicQuizAttempt, ArabicQuizQuestion
+from apps.arabic_learning.services import complete_lesson
 from apps.islamic_calendar.models import EventTranslation, IslamicEvent
 from apps.learning.models import QuizAttempt, QuizQuestion, QuizType
 from apps.notifications.models import NotificationKind, ScheduledNotification
@@ -41,6 +43,27 @@ def test_qada_is_added_to_random_pool_only_when_debt_exists(user):
     with patch("apps.notifications.services.random.choice", side_effect=lambda values: values[-1]):
         kinds = {item.kind for item in plan_daily_for_user(user, date(2026, 7, 27))}
     assert kinds == {NotificationKind.QADA}
+
+
+@pytest.mark.django_db
+def test_arabic_review_is_added_to_daily_pool_after_completed_lesson(user):
+    from django.core.management import call_command
+
+    call_command("seed_arabic", verbosity=0)
+    lesson = ArabicLesson.objects.get(category="alphabet", order=1)
+    complete_lesson(user, lesson.id)
+    user.notification_preferences.random_messages_per_day = 1
+    user.notification_preferences.save()
+    with patch(
+        "apps.notifications.services.random.choice",
+        side_effect=lambda values: (
+            NotificationKind.ARABIC_REVIEW
+            if NotificationKind.ARABIC_REVIEW in values
+            else values[0]
+        ),
+    ):
+        planned = plan_daily_for_user(user, date(2026, 7, 28))
+    assert planned[0].kind == NotificationKind.ARABIC_REVIEW
 
 
 @pytest.mark.django_db
@@ -118,6 +141,33 @@ def test_weekly_report_aggregates_learning_and_qada(user, introduced_names):
     assert report.data["accuracy"] == 100
     assert report.data["prayer_completed"] == 1
     assert "100%" in report.rendered_text
+
+
+@pytest.mark.django_db
+def test_weekly_report_includes_arabic_learning(user):
+    from django.core.management import call_command
+
+    call_command("seed_arabic", verbosity=0)
+    lesson = ArabicLesson.objects.get(category="alphabet", order=1)
+    complete_lesson(user, lesson.id)
+    item = lesson.items.first()
+    question = ArabicQuizQuestion.objects.create(
+        user=user,
+        target_item=item,
+        quiz_type="arabic_meaning",
+        language="ru",
+        prompt=item.arabic_text,
+        options=[{"label": "x", "item_id": item.id}],
+        correct_option=0,
+    )
+    ArabicQuizAttempt.objects.create(
+        question=question, user=user, selected_option=0, is_correct=True
+    )
+    report = build_weekly_report(user, timezone.localdate())
+    assert report.data["arabic_lessons_completed"] == 1
+    assert report.data["arabic_reviews"] == 1
+    assert report.data["arabic_accuracy"] == 100
+    assert "Арабский язык" in report.rendered_text
 
 
 @pytest.mark.django_db
