@@ -6,6 +6,11 @@
 __pycache__
 *.py[cod]
 *.sqlite3*
+**/*.sqlite3*
+backups
+**/backups
+*.backup
+**/*.backup
 .pytest_cache
 .ruff_cache
 .coverage
