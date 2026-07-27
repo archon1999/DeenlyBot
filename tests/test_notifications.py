@@ -1,7 +1,8 @@
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from django.core.management import call_command
 from django.utils import timezone
 from hijridate import Hijri
 
@@ -18,7 +19,7 @@ from apps.notifications.services import (
 )
 from apps.notifications.tasks import deliver_notification, dispatch_due_notifications
 from apps.worship.models import PrayerType, WorshipKind
-from apps.worship.services import add_debt, complete_one
+from apps.worship.services import add_debt, add_manual_qada, complete_one
 
 
 @pytest.mark.django_db
@@ -37,12 +38,48 @@ def test_daily_plan_is_idempotent_and_in_user_window(user):
 
 @pytest.mark.django_db
 def test_qada_is_added_to_random_pool_only_when_debt_exists(user):
-    add_debt(user, WorshipKind.PRAYER, 2, PrayerType.FAJR)
+    add_manual_qada(user, date(2026, 7, 27), PrayerType.FAJR)
     user.notification_preferences.random_messages_per_day = 10
     user.notification_preferences.save()
     with patch("apps.notifications.services.random.choice", side_effect=lambda values: values[-1]):
         kinds = {item.kind for item in plan_daily_for_user(user, date(2026, 7, 27))}
     assert kinds == {NotificationKind.QADA}
+
+
+@pytest.mark.django_db
+def test_random_notifications_use_unique_half_hour_slots(user):
+    preferences = user.notification_preferences
+    preferences.random_messages_per_day = 10
+    preferences.random_window_start = time(9, 10)
+    preferences.random_window_end = time(14, 30)
+    preferences.save()
+
+    planned = plan_daily_for_user(user, date(2026, 7, 28))
+    local_times = [item.due_at.time() for item in planned]
+
+    assert len(local_times) == 10
+    assert len(set(local_times)) == 10
+    assert {value.minute for value in local_times} <= {0, 30}
+    assert all(value.second == 0 and value.microsecond == 0 for value in local_times)
+
+
+@pytest.mark.django_db
+def test_replan_command_replaces_legacy_daily_schedule(user):
+    local_day = timezone.localdate().isoformat()
+    legacy_key = f"daily:{user.id}:{local_day}:0"
+    ScheduledNotification.objects.create(
+        user=user,
+        kind=NotificationKind.DUA,
+        due_at=timezone.now(),
+        dedupe_key=legacy_key,
+    )
+    call_command("replan_random_notifications", verbosity=0)
+
+    legacy = ScheduledNotification.objects.get(dedupe_key=legacy_key)
+    assert legacy.status == "skipped"
+    assert ScheduledNotification.objects.filter(
+        user=user, dedupe_key__contains=":v1:"
+    ).count() == user.notification_preferences.random_messages_per_day
 
 
 @pytest.mark.django_db

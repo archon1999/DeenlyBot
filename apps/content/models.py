@@ -46,11 +46,19 @@ class NameTranslation(TimeStampedModel):
         return f"{self.name} [{self.language}]"
 
 
+class QuranPassageType(models.TextChoices):
+    AYAH = "ayah", "Ayah or passage"
+    SURAH = "surah", "Complete surah"
+
+
 class QuranPassage(TimeStampedModel):
     slug = models.SlugField(unique=True)
     surah_number = models.PositiveSmallIntegerField()
     ayah_start = models.PositiveSmallIntegerField()
     ayah_end = models.PositiveSmallIntegerField()
+    passage_type = models.CharField(
+        max_length=10, choices=QuranPassageType.choices, default=QuranPassageType.AYAH
+    )
     arabic_text = models.TextField()
     source = models.ForeignKey(
         ReligiousSource, on_delete=models.PROTECT, related_name="quran_passages"

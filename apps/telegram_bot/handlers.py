@@ -6,10 +6,11 @@ from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 from asgiref.sync import sync_to_async
+from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.utils import timezone
 
-from apps.content.models import Dua, Favorite, NameOfAllah, QuranPassage
+from apps.content.models import Dua, Favorite, NameOfAllah, QuranPassage, QuranPassageType
 from apps.content.services import localized_name, toggle_dua_favorite, toggle_passage_favorite
 from apps.islamic_calendar.services import upcoming_events
 from apps.learning.models import LearningStatus, QuizQuestion, UserNameProgress
@@ -20,13 +21,20 @@ from apps.learning.services import (
     next_name_for_user,
     select_review_target,
 )
-from apps.users.services import set_language
-from apps.worship.models import WorshipKind
-from apps.worship.services import add_debt, balances_for_user, complete_one
+from apps.users.services import set_language, update_notification_preference
+from apps.worship.models import PrayerType, WorshipKind
+from apps.worship.services import (
+    add_debt,
+    add_manual_qada,
+    balances_for_user,
+    complete_current_qada,
+    complete_one,
+    configure_historical_qada,
+    qada_summary,
+)
 
 from .i18n import TEXTS, t
 from .keyboards import (
-    back_to_library_button,
     language_keyboard,
     library_keyboard,
     main_menu,
@@ -34,7 +42,9 @@ from .keyboards import (
     names_section_keyboard,
     quiz_keyboard,
     quiz_result_keyboard,
+    quran_keyboard,
     reveal_keyboard,
+    settings_keyboard,
 )
 from .rendering import render_name_card, render_quiz, render_quiz_result
 
@@ -66,7 +76,81 @@ async def help_command(message: Message, db_user):
 @router.message(Command("settings"))
 @router.message(lambda message: message.text in _button_values("settings"))
 async def settings_handler(message: Message, db_user):
-    await message.answer(t(db_user.language, "choose_language"), reply_markup=language_keyboard())
+    preference = await sync_to_async(
+        lambda: type(db_user)
+        .objects.select_related("notification_preferences")
+        .get(id=db_user.id)
+        .notification_preferences,
+        thread_sensitive=True,
+    )()
+    await message.answer(
+        t(
+            db_user.language,
+            "settings_title",
+            status=t(
+                db_user.language,
+                "enabled" if preference.enabled else "disabled",
+            ),
+            count=preference.random_messages_per_day,
+            start=preference.random_window_start.strftime("%H:%M"),
+            end=preference.random_window_end.strftime("%H:%M"),
+            weekly=t(
+                db_user.language,
+                "enabled" if preference.weekly_report_enabled else "disabled",
+            ),
+        ),
+        reply_markup=settings_keyboard(db_user.language, preference),
+    )
+
+
+async def _edit_settings(message, user):
+    preference = await sync_to_async(
+        lambda: type(user)
+        .objects.select_related("notification_preferences")
+        .get(id=user.id)
+        .notification_preferences,
+        thread_sensitive=True,
+    )()
+    await message.edit_text(
+        t(
+            user.language,
+            "settings_title",
+            status=t(user.language, "enabled" if preference.enabled else "disabled"),
+            count=preference.random_messages_per_day,
+            start=preference.random_window_start.strftime("%H:%M"),
+            end=preference.random_window_end.strftime("%H:%M"),
+            weekly=t(
+                user.language,
+                "enabled" if preference.weekly_report_enabled else "disabled",
+            ),
+        ),
+        reply_markup=settings_keyboard(user.language, preference),
+    )
+
+
+@router.callback_query(F.data.startswith("settings:notify:"))
+async def notification_settings_callback(callback: CallbackQuery, db_user):
+    action = callback.data.rsplit(":", 1)[1]
+    try:
+        await sync_to_async(update_notification_preference, thread_sensitive=True)(db_user, action)
+    except (ValueError, ValidationError):
+        await callback.answer(t(db_user.language, "invalid_setting"), show_alert=True)
+        return
+    await callback.answer(t(db_user.language, "settings_saved"))
+    await _edit_settings(callback.message, db_user)
+
+
+@router.callback_query(F.data == "settings:language")
+async def settings_language_callback(callback: CallbackQuery, db_user):
+    await callback.answer()
+    await callback.message.edit_text(
+        t(db_user.language, "choose_language"), reply_markup=language_keyboard()
+    )
+
+
+@router.callback_query(F.data == "settings:noop")
+async def settings_noop(callback: CallbackQuery):
+    await callback.answer()
 
 
 @router.callback_query(F.data.startswith("lang:"))
@@ -92,9 +176,7 @@ def _names_dashboard_data(user):
     return {
         "introduced": progress.count(),
         "total": NameOfAllah.objects.filter(is_published=True).count(),
-        "today": progress.filter(
-            introduced_at__gte=day_start, introduced_at__lt=day_end
-        ).count(),
+        "today": progress.filter(introduced_at__gte=day_start, introduced_at__lt=day_end).count(),
         "due": progress.filter(next_review_at__lte=now).count(),
         "next_name": next_label,
     }
@@ -201,9 +283,7 @@ def _review_data(user, target_id=None, *, extra=False, exclude_type=None):
     return "quiz", question
 
 
-async def send_review(
-    message, user, target_id=None, *, extra=False, exclude_type=None, edit=False
-):
+async def send_review(message, user, target_id=None, *, extra=False, exclude_type=None, edit=False):
     kind, value = await sync_to_async(_review_data, thread_sensitive=True)(
         user, target_id, extra=extra, exclude_type=exclude_type
     )
@@ -387,18 +467,12 @@ def _studied_names_page(user, page):
 
 def _studied_names_keyboard(language, items, page, pages):
     rows = [
-        [
-            InlineKeyboardButton(
-                text=label, callback_data=f"names:item:{name_id}:{page}"
-            )
-        ]
+        [InlineKeyboardButton(text=label, callback_data=f"names:item:{name_id}:{page}")]
         for name_id, label in items
     ]
     navigation = []
     if page > 1:
-        navigation.append(
-            InlineKeyboardButton(text="⬅️", callback_data=f"names:list:{page - 1}")
-        )
+        navigation.append(InlineKeyboardButton(text="⬅️", callback_data=f"names:list:{page - 1}"))
     navigation.append(
         InlineKeyboardButton(
             text=t(language, "page_indicator", page=page, pages=pages),
@@ -406,9 +480,7 @@ def _studied_names_keyboard(language, items, page, pages):
         )
     )
     if page < pages:
-        navigation.append(
-            InlineKeyboardButton(text="➡️", callback_data=f"names:list:{page + 1}")
-        )
+        navigation.append(InlineKeyboardButton(text="➡️", callback_data=f"names:list:{page + 1}"))
     rows.append(navigation)
     rows.append(
         [InlineKeyboardButton(text=t(language, "back_to_names"), callback_data="names:home")]
@@ -502,17 +574,30 @@ def _localized_page(queryset, language, page):
     return result, page, pages
 
 
-def _passage_list(language, page=1):
-    return _localized_page(QuranPassage.objects.filter(is_published=True), language, page)
+def _passage_list(language, page=1, passage_type=QuranPassageType.AYAH):
+    return _localized_page(
+        QuranPassage.objects.filter(is_published=True, passage_type=passage_type),
+        language,
+        page,
+    )
 
 
-def _library_page_keyboard(language, items, page, pages, kind):
+def _library_page_keyboard(language, items, page, pages, kind, subsection=None):
+    if kind == "passage" and not subsection:
+        subsection = QuranPassageType.AYAH
     rows = [
-        [InlineKeyboardButton(text=title, callback_data=f"{kind}:{pk}:{page}")]
+        [
+            InlineKeyboardButton(
+                text=title,
+                callback_data=(
+                    f"{kind}:{pk}:{subsection}:{page}" if subsection else f"{kind}:{pk}:{page}"
+                ),
+            )
+        ]
         for pk, title in items
     ]
     navigation = []
-    section = {"passage": "quran", "dua": "duas"}[kind]
+    section = f"quran:{subsection}" if subsection else {"dua": "duas"}[kind]
     if page > 1:
         navigation.append(
             InlineKeyboardButton(text="⬅️", callback_data=f"library:{section}:{page - 1}")
@@ -528,24 +613,53 @@ def _library_page_keyboard(language, items, page, pages, kind):
             InlineKeyboardButton(text="➡️", callback_data=f"library:{section}:{page + 1}")
         )
     rows.append(navigation)
-    rows.append([back_to_library_button(language)])
+    rows.append(
+        [
+            InlineKeyboardButton(
+                text=t(language, "back"),
+                callback_data="library:quran" if subsection else "library:home",
+            )
+        ]
+    )
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-@router.callback_query(F.data.startswith("library:quran"))
+@router.callback_query(F.data == "library:quran")
+async def quran_home(callback: CallbackQuery, db_user):
+    await callback.answer()
+    await callback.message.edit_text(
+        t(db_user.language, "quran_choose"), reply_markup=quran_keyboard(db_user.language)
+    )
+
+
+@router.callback_query(F.data.startswith("library:quran:"))
 async def quran_list(callback: CallbackQuery, db_user):
     parts = callback.data.split(":")
-    page = int(parts[2]) if len(parts) > 2 else 1
-    passages, page, pages = await sync_to_async(_passage_list)(db_user.language, page)
+    if len(parts) == 3 and parts[2].isdigit():
+        passage_type = QuranPassageType.AYAH
+        page = int(parts[2])
+    else:
+        passage_type = parts[2]
+        page = int(parts[3]) if len(parts) > 3 else 1
+    if passage_type not in QuranPassageType.values:
+        await callback.answer()
+        return
+    passages, page, pages = await sync_to_async(_passage_list)(db_user.language, page, passage_type)
     if not passages:
         await callback.answer(t(db_user.language, "quran_empty"), show_alert=True)
         return
     keyboard = _library_page_keyboard(
-        db_user.language, passages, page, pages, "passage"
+        db_user.language, passages, page, pages, "passage", passage_type
     )
     await callback.answer()
     await callback.message.edit_text(
-        t(db_user.language, "quran_page", page=page, pages=pages), reply_markup=keyboard
+        t(
+            db_user.language,
+            "surahs_page" if passage_type == QuranPassageType.SURAH else "ayahs_page",
+            page=page,
+            pages=pages,
+        ),
+        reply_markup=keyboard,
     )
 
 
@@ -563,8 +677,9 @@ def _passage_data(user, passage_id):
     return passage, translation, favorite
 
 
-async def send_passage(message, user, passage_id, page=1):
+async def send_passage(message, user, passage_id, passage_type=None, page=1):
     passage, translation, favorite = await sync_to_async(_passage_data)(user, passage_id)
+    passage_type = passage_type or passage.passage_type
     text = t(
         user.language,
         "passage",
@@ -580,7 +695,8 @@ async def send_passage(message, user, passage_id, page=1):
             [InlineKeyboardButton(text=label, callback_data=f"favp:{passage.id}")],
             [
                 InlineKeyboardButton(
-                    text=t(user.language, "back"), callback_data=f"library:quran:{page}"
+                    text=t(user.language, "back"),
+                    callback_data=f"library:quran:{passage_type}:{page}",
                 )
             ],
         ]
@@ -592,7 +708,9 @@ async def send_passage(message, user, passage_id, page=1):
 async def passage_callback(callback: CallbackQuery, db_user):
     await callback.answer()
     parts = callback.data.split(":")
-    await send_passage(callback.message, db_user, int(parts[1]), int(parts[2]) if len(parts) > 2 else 1)
+    passage_type = parts[2] if len(parts) > 3 else None
+    page = int(parts[3]) if len(parts) > 3 else (int(parts[2]) if len(parts) > 2 else 1)
+    await send_passage(callback.message, db_user, int(parts[1]), passage_type, page)
 
 
 def _dua_list(language, page=1):
@@ -729,35 +847,82 @@ async def favorites_callback(callback: CallbackQuery, db_user):
     await send_favorites(callback.message, db_user)
 
 
-PRAYER_LABELS = {
-    "fajr": "Fajr",
-    "dhuhr": "Dhuhr",
-    "asr": "Asr",
-    "maghrib": "Maghrib",
-    "isha": "Isha",
-    "witr": "Witr",
+PRAYER_ALIASES = {
+    "fajr": PrayerType.FAJR,
+    "bomdod": PrayerType.FAJR,
+    "фаджр": PrayerType.FAJR,
+    "dhuhr": PrayerType.DHUHR,
+    "zuhr": PrayerType.DHUHR,
+    "peshin": PrayerType.DHUHR,
+    "зухр": PrayerType.DHUHR,
+    "asr": PrayerType.ASR,
+    "аср": PrayerType.ASR,
+    "maghrib": PrayerType.MAGHRIB,
+    "shom": PrayerType.MAGHRIB,
+    "магриб": PrayerType.MAGHRIB,
+    "isha": PrayerType.ISHA,
+    "xufton": PrayerType.ISHA,
+    "хуфтон": PrayerType.ISHA,
+    "иша": PrayerType.ISHA,
 }
 
 
 def _qada_view(user):
-    return balances_for_user(user)
+    summary = qada_summary(user)
+    summary["fast"] = balances_for_user(user)["fast"]
+    return summary
 
 
-async def send_qada(message, user):
-    balances = await sync_to_async(_qada_view)(user)
-    prayer_lines = [f"{PRAYER_LABELS[key]}: {value}" for key, value in balances["prayers"].items()]
-    buttons = [
-        [InlineKeyboardButton(text=f"✓ {PRAYER_LABELS[key]}", callback_data=f"done:prayer:{key}")]
-        for key, value in balances["prayers"].items()
-        if value > 0
-    ]
-    if balances["fast"] > 0:
-        buttons.append([InlineKeyboardButton(text="✓ Fast", callback_data="done:fast:-")])
-    await message.answer(
-        t(user.language, "qada_title", prayers="\n".join(prayer_lines), fast=balances["fast"]),
+async def send_qada(message, user, *, edit=False):
+    summary = await sync_to_async(_qada_view, thread_sensitive=True)(user)
+    current = summary["current"]
+    if current:
+        current_text = t(
+            user.language,
+            "qada_current",
+            date=current.prayer_date.strftime("%d.%m.%Y"),
+            prayer=t(user.language, f"prayer_{current.prayer_type}"),
+            source=t(user.language, f"qada_source_{current.source}"),
+        )
+    else:
+        current_text = t(user.language, "qada_no_prayer")
+    text = t(
+        user.language,
+        "qada_title",
+        current=current_text,
+        manual_pending=summary["manual_pending"],
+        manual_completed=summary["manual_completed"],
+        historical_completed=summary["historical_completed"],
+        historical_status=t(
+            user.language,
+            "qada_history_active" if summary["historical_configured"] else "qada_history_missing",
+        ),
+        fast=summary["fast"],
+    )
+    buttons = []
+    if current:
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=t(user.language, "qada_mark_done"),
+                    callback_data=f"qada:done:{current.key}",
+                )
+            ]
+        )
+    if summary["fast"] > 0:
+        buttons.append(
+            [
+                InlineKeyboardButton(
+                    text=t(user.language, "qada_fast_done"),
+                    callback_data="qada:fast_done",
+                )
+            ]
+        )
+    method = message.edit_text if edit else message.answer
+    await method(
+        text,
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None,
     )
-    await message.answer(t(user.language, "qada_help"))
 
 
 @router.message(Command("qada"))
@@ -769,33 +934,82 @@ async def qada_handler(message: Message, db_user):
 @router.message(Command("qada_add"))
 async def qada_add_handler(message: Message, db_user):
     parts = (message.text or "").split()
-    if len(parts) != 3:
-        await message.answer(t(db_user.language, "invalid_qada"))
-        return
-    label = parts[1].lower()
-    try:
-        amount = int(parts[2])
-        if label == "fast":
+    if len(parts) == 3 and parts[1].lower() == "fast":
+        try:
+            amount = int(parts[2])
             await sync_to_async(add_debt)(db_user, WorshipKind.FAST, amount)
-        else:
-            await sync_to_async(add_debt)(db_user, WorshipKind.PRAYER, amount, label)
-    except (ValueError, TypeError):
+        except (ValueError, TypeError):
+            await message.answer(t(db_user.language, "invalid_qada"))
+            return
+        await message.answer(t(db_user.language, "qada_fast_added", amount=amount))
+        await send_qada(message, db_user)
+        return
+    if len(parts) not in {4, 5}:
         await message.answer(t(db_user.language, "invalid_qada"))
         return
-    await message.answer(t(db_user.language, "debt_added", label=escape(label), amount=amount))
+    try:
+        day, month = int(parts[1]), int(parts[2])
+        if len(parts) == 4:
+            year = timezone.now().astimezone(ZoneInfo(db_user.timezone)).year
+            prayer_label = parts[3].lower()
+        else:
+            year = int(parts[3])
+            prayer_label = parts[4].lower()
+        prayer_type = PRAYER_ALIASES[prayer_label]
+        prayer_date = datetime(year, month, day).date()
+        _, created = await sync_to_async(add_manual_qada)(db_user, prayer_date, prayer_type)
+    except (ValueError, TypeError, KeyError):
+        await message.answer(t(db_user.language, "invalid_qada"))
+        return
+    await message.answer(
+        t(
+            db_user.language,
+            "qada_added" if created else "qada_duplicate",
+            date=prayer_date.strftime("%d.%m.%Y"),
+            prayer=t(db_user.language, f"prayer_{prayer_type}"),
+        )
+    )
     await send_qada(message, db_user)
 
 
-@router.callback_query(F.data.startswith("done:"))
-async def qada_done(callback: CallbackQuery, db_user):
-    _, kind, prayer = callback.data.split(":")
+@router.message(Command("qada_start"))
+async def qada_start_handler(message: Message, db_user):
+    parts = (message.text or "").split()
+    if len(parts) != 5:
+        await message.answer(t(db_user.language, "invalid_qada_start"))
+        return
     try:
-        await sync_to_async(complete_one)(db_user, kind, "" if prayer == "-" else prayer)
+        start_date = datetime(int(parts[3]), int(parts[2]), int(parts[1])).date()
+        prayer_type = PRAYER_ALIASES[parts[4].lower()]
+        await sync_to_async(configure_historical_qada)(db_user, start_date, prayer_type)
+    except (ValueError, TypeError, KeyError):
+        await message.answer(t(db_user.language, "invalid_qada_start"))
+        return
+    await message.answer(t(db_user.language, "qada_history_saved"))
+    await send_qada(message, db_user)
+
+
+@router.callback_query(F.data.startswith("qada:done:"))
+async def qada_done(callback: CallbackQuery, db_user):
+    expected_key = callback.data.removeprefix("qada:done:")
+    try:
+        await sync_to_async(complete_current_qada)(db_user, expected_key)
     except ValueError:
         await callback.answer(t(db_user.language, "nothing_to_complete"), show_alert=True)
         return
     await callback.answer(t(db_user.language, "completed"))
-    await send_qada(callback.message, db_user)
+    await send_qada(callback.message, db_user, edit=True)
+
+
+@router.callback_query(F.data == "qada:fast_done")
+async def qada_fast_done(callback: CallbackQuery, db_user):
+    try:
+        await sync_to_async(complete_one)(db_user, WorshipKind.FAST)
+    except ValueError:
+        await callback.answer(t(db_user.language, "nothing_to_complete"), show_alert=True)
+        return
+    await callback.answer(t(db_user.language, "completed"))
+    await send_qada(callback.message, db_user, edit=True)
 
 
 @router.message(Command("calendar"))

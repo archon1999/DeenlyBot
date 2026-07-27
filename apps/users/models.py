@@ -39,6 +39,7 @@ class NotificationPreference(TimeStampedModel):
     random_messages_per_day = models.PositiveSmallIntegerField(default=2)
     random_window_start = models.TimeField(default=time(9, 0))
     random_window_end = models.TimeField(default=time(21, 0))
+    schedule_version = models.PositiveIntegerField(default=0, editable=False)
     quiet_start = models.TimeField(default=time(22, 0))
     quiet_end = models.TimeField(default=time(7, 0))
     weekly_report_enabled = models.BooleanField(default=True)
@@ -52,6 +53,13 @@ class NotificationPreference(TimeStampedModel):
             raise ValidationError({"random_messages_per_day": "Maximum is 10"})
         if self.random_window_start >= self.random_window_end:
             raise ValidationError("Random notification start must be before end")
+        start_minutes = self.random_window_start.hour * 60 + self.random_window_start.minute
+        end_minutes = self.random_window_end.hour * 60 + self.random_window_end.minute
+        available_slots = (end_minutes - start_minutes) // 30
+        if self.random_messages_per_day > available_slots:
+            raise ValidationError(
+                {"random_messages_per_day": "Not enough half-hour slots in the window"}
+            )
         if self.weekly_report_weekday > 6:
             raise ValidationError({"weekly_report_weekday": "Must be between 0 and 6"})
 

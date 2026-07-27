@@ -32,11 +32,7 @@ def main_menu(language):
 def names_section_keyboard(language):
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text=t(language, "names_continue"), callback_data="names:learn"
-                )
-            ],
+            [InlineKeyboardButton(text=t(language, "names_continue"), callback_data="names:learn")],
             [
                 InlineKeyboardButton(
                     text=t(language, "names_review"), callback_data="names:review"
@@ -63,11 +59,7 @@ def name_candidate_keyboard(language, name_id):
                     callback_data=f"names:complete:{name_id}",
                 )
             ],
-            [
-                InlineKeyboardButton(
-                    text=t(language, "back_to_names"), callback_data="names:home"
-                )
-            ],
+            [InlineKeyboardButton(text=t(language, "back_to_names"), callback_data="names:home")],
         ]
     )
 
@@ -145,11 +137,7 @@ def arabic_quiz_result_keyboard(language, question):
                     callback_data="arabic:review",
                 ),
             ],
-            [
-                InlineKeyboardButton(
-                    text=t(language, "arabic_back"), callback_data="arabic:home"
-                )
-            ],
+            [InlineKeyboardButton(text=t(language, "arabic_back"), callback_data="arabic:home")],
         ]
     )
 
@@ -162,6 +150,64 @@ def language_keyboard():
                 InlineKeyboardButton(text="Русский", callback_data="lang:ru"),
                 InlineKeyboardButton(text="English", callback_data="lang:en"),
             ]
+        ]
+    )
+
+
+def settings_keyboard(language, preference):
+    enabled_key = "notifications_on" if preference.enabled else "notifications_off"
+    weekly_key = "weekly_on" if preference.weekly_report_enabled else "weekly_off"
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t(language, enabled_key),
+                    callback_data="settings:notify:toggle",
+                )
+            ],
+            [
+                InlineKeyboardButton(text="➖", callback_data="settings:notify:count_down"),
+                InlineKeyboardButton(
+                    text=t(
+                        language,
+                        "notification_count_button",
+                        count=preference.random_messages_per_day,
+                    ),
+                    callback_data="settings:noop",
+                ),
+                InlineKeyboardButton(text="➕", callback_data="settings:notify:count_up"),
+            ],
+            [
+                InlineKeyboardButton(text="◀️", callback_data="settings:notify:start_down"),
+                InlineKeyboardButton(
+                    text=t(
+                        language,
+                        "notification_start_button",
+                        time=preference.random_window_start.strftime("%H:%M"),
+                    ),
+                    callback_data="settings:noop",
+                ),
+                InlineKeyboardButton(text="▶️", callback_data="settings:notify:start_up"),
+            ],
+            [
+                InlineKeyboardButton(text="◀️", callback_data="settings:notify:end_down"),
+                InlineKeyboardButton(
+                    text=t(
+                        language,
+                        "notification_end_button",
+                        time=preference.random_window_end.strftime("%H:%M"),
+                    ),
+                    callback_data="settings:noop",
+                ),
+                InlineKeyboardButton(text="▶️", callback_data="settings:notify:end_up"),
+            ],
+            [
+                InlineKeyboardButton(
+                    text=t(language, weekly_key),
+                    callback_data="settings:notify:weekly_toggle",
+                )
+            ],
+            [InlineKeyboardButton(text=t(language, "language"), callback_data="settings:language")],
         ]
     )
 
@@ -196,11 +242,7 @@ def quiz_result_keyboard(language, question):
                     text=t(language, "details"), callback_data=f"name:{question.target_name_id}"
                 )
             ],
-            [
-                InlineKeyboardButton(
-                    text=t(language, "back_to_names"), callback_data="names:home"
-                )
-            ],
+            [InlineKeyboardButton(text=t(language, "back_to_names"), callback_data="names:home")],
         ]
     )
 
@@ -208,12 +250,12 @@ def quiz_result_keyboard(language, question):
 def reveal_keyboard(language, name_id):
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=t(language, "show_answer"), callback_data=f"name:{name_id}")],
             [
                 InlineKeyboardButton(
-                    text=t(language, "back_to_names"), callback_data="names:home"
+                    text=t(language, "show_answer"), callback_data=f"name:{name_id}"
                 )
             ],
+            [InlineKeyboardButton(text=t(language, "back_to_names"), callback_data="names:home")],
         ]
     )
 
@@ -230,6 +272,22 @@ def library_keyboard(language):
                     text=t(language, "favorites"), callback_data="library:favorites"
                 )
             ],
+        ]
+    )
+
+
+def quran_keyboard(language):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=t(language, "ayahs"), callback_data="library:quran:ayah:1"
+                ),
+                InlineKeyboardButton(
+                    text=t(language, "surahs"), callback_data="library:quran:surah:1"
+                ),
+            ],
+            [back_to_library_button(language)],
         ]
     )
 

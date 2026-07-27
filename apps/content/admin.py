@@ -31,7 +31,15 @@ class QuranTranslationInline(admin.StackedInline):
 
 @admin.register(QuranPassage)
 class QuranPassageAdmin(admin.ModelAdmin):
-    list_display = ("slug", "surah_number", "ayah_start", "ayah_end", "is_published")
+    list_display = (
+        "slug",
+        "passage_type",
+        "surah_number",
+        "ayah_start",
+        "ayah_end",
+        "is_published",
+    )
+    list_filter = ("passage_type", "is_published")
     inlines = [QuranTranslationInline]
 
 

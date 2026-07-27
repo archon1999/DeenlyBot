@@ -2,10 +2,15 @@ from types import SimpleNamespace
 
 import pytest
 from django.test import override_settings
+from django.utils import timezone
 
-from apps.notifications.models import ScheduledNotification
+from apps.notifications.models import NotificationKind, NotificationStatus, ScheduledNotification
 from apps.users.models import TelegramUser
-from apps.users.services import PersonalBotAccessDenied, register_or_update_telegram_user
+from apps.users.services import (
+    PersonalBotAccessDenied,
+    register_or_update_telegram_user,
+    update_notification_preference,
+)
 
 
 def telegram_user(identifier, language="en"):
@@ -50,3 +55,31 @@ def test_new_owner_gets_a_schedule_immediately(django_capture_on_commit_callback
         ).count()
         == 2
     )
+
+
+@pytest.mark.django_db
+def test_notification_settings_update_and_replan(user, django_capture_on_commit_callbacks):
+    with django_capture_on_commit_callbacks(execute=True):
+        preference = update_notification_preference(user, "count_up")
+
+    assert preference.random_messages_per_day == 3
+    assert preference.schedule_version == 1
+    planned = ScheduledNotification.objects.filter(user=user, dedupe_key__contains=":v1:")
+    assert planned.count() == 3
+    assert {item.due_at.minute for item in planned} <= {0, 30}
+
+
+@pytest.mark.django_db
+def test_disabling_weekly_report_skips_pending_report(
+    user, django_capture_on_commit_callbacks
+):
+    report = ScheduledNotification.objects.create(
+        user=user,
+        kind=NotificationKind.WEEKLY_REPORT,
+        due_at=timezone.now(),
+        dedupe_key="weekly-settings-test",
+    )
+    with django_capture_on_commit_callbacks(execute=True):
+        update_notification_preference(user, "weekly_toggle")
+    report.refresh_from_db()
+    assert report.status == NotificationStatus.SKIPPED

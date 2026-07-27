@@ -3,7 +3,14 @@ import asyncio
 import pytest
 from django.core.management import call_command
 
-from apps.content.models import Dua, Favorite, NameOfAllah, NameTranslation, QuranPassage
+from apps.content.models import (
+    Dua,
+    Favorite,
+    NameOfAllah,
+    NameTranslation,
+    QuranPassage,
+    QuranPassageType,
+)
 from apps.content.services import localized_name, toggle_dua_favorite, toggle_passage_favorite
 from apps.islamic_calendar.models import IslamicEvent
 from apps.telegram_bot.handlers import _dua_list, _library_page_keyboard, _passage_list
@@ -30,18 +37,22 @@ def test_seed_is_complete_multilingual_and_idempotent():
     assert not NameTranslation.objects.filter(description__startswith="Это имя указывает").exists()
     assert not NameTranslation.objects.filter(transcription="").exists()
     assert not QuranPassage.objects.filter(translations__transcription="").exists()
+    assert QuranPassage.objects.filter(passage_type=QuranPassageType.SURAH).count() == 5
+    assert QuranPassage.objects.filter(passage_type=QuranPassageType.AYAH).count() == 11
 
 
 @pytest.mark.django_db
 def test_quran_and_dua_library_pages_have_ten_items():
     call_command("seed_content", verbosity=0)
 
-    quran_first, quran_page, quran_pages = _passage_list("ru", 1)
-    quran_second, _, _ = _passage_list("ru", 2)
+    ayah_first, ayah_page, ayah_pages = _passage_list("ru", 1, QuranPassageType.AYAH)
+    ayah_second, _, _ = _passage_list("ru", 2, QuranPassageType.AYAH)
+    surahs, surah_page, surah_pages = _passage_list("ru", 1, QuranPassageType.SURAH)
     dua_first, dua_page, dua_pages = _dua_list("ru", 1)
     dua_second, _, _ = _dua_list("ru", 2)
 
-    assert (len(quran_first), len(quran_second), quran_page, quran_pages) == (10, 6, 1, 2)
+    assert (len(ayah_first), len(ayah_second), ayah_page, ayah_pages) == (10, 1, 1, 2)
+    assert (len(surahs), surah_page, surah_pages) == (5, 1, 1)
     assert (len(dua_first), len(dua_second), dua_page, dua_pages) == (10, 3, 1, 2)
 
 
@@ -49,14 +60,17 @@ def test_library_pagination_callbacks_target_registered_sections():
     quran_keyboard = _library_page_keyboard("ru", [(1, "Аят")], 1, 2, "passage")
     dua_keyboard = _library_page_keyboard("ru", [(1, "Дуа")], 1, 2, "dua")
 
-    assert quran_keyboard.inline_keyboard[-2][-1].callback_data == "library:quran:2"
+    assert quran_keyboard.inline_keyboard[0][0].callback_data == "passage:1:ayah:1"
+    assert quran_keyboard.inline_keyboard[-2][-1].callback_data == "library:quran:ayah:2"
     assert dua_keyboard.inline_keyboard[-2][-1].callback_data == "library:duas:2"
 
 
 @pytest.mark.django_db
 def test_prefetched_name_translation_is_safe_inside_async_context(user, four_names):
-    name = NameOfAllah.objects.select_related("source").prefetch_related("translations").get(
-        id=four_names[0].id
+    name = (
+        NameOfAllah.objects.select_related("source")
+        .prefetch_related("translations")
+        .get(id=four_names[0].id)
     )
 
     async def render_without_database_access():

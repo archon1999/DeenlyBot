@@ -8,6 +8,7 @@ from apps.content.models import (
     NameTranslation,
     QuranPassage,
     QuranPassageTranslation,
+    QuranPassageType,
     ReligiousSource,
 )
 from apps.content.seed_duas import EXTRA_DUAS, localized_dua_transcription
@@ -18,6 +19,8 @@ from apps.content.seed_quran import (
     PASSAGE_TRANSCRIPTIONS,
 )
 from apps.islamic_calendar.models import EventTranslation, IslamicEvent
+
+FULL_SURAH_SLUGS = {"al-fatiha", "al-kafirun", "al-ikhlas", "al-falaq", "an-nas"}
 
 # Concise learning meanings for the widely used traditional enumeration. They are
 # intentionally stored with source metadata and can be reviewed or corrected in Admin.
@@ -556,6 +559,11 @@ class Command(BaseCommand):
                     "surah_number": data["surah"],
                     "ayah_start": data["start"],
                     "ayah_end": data["end"],
+                    "passage_type": (
+                        QuranPassageType.SURAH
+                        if data["slug"] in FULL_SURAH_SLUGS
+                        else QuranPassageType.AYAH
+                    ),
                     "arabic_text": data["arabic"],
                     "source": quran_source,
                     "is_published": True,

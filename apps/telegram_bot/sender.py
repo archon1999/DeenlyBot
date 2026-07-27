@@ -12,7 +12,7 @@ from apps.islamic_calendar.services import localized_event
 from apps.learning.services import build_quiz, select_review_target
 from apps.notifications.models import NotificationKind
 from apps.notifications.services import build_weekly_report
-from apps.worship.services import balances_for_user
+from apps.worship.services import balances_for_user, qada_summary
 
 from .arabic_rendering import render_arabic_quiz
 from .bot import create_bot
@@ -49,9 +49,7 @@ def _prepare_arabic_review(user):
         return t(user.language, "arabic_no_progress"), None
     if count < 4:
         progress = select_arabic_review_target(user)
-        item = ArabicLearningItem.objects.prefetch_related("translations").get(
-            id=progress.item_id
-        )
+        item = ArabicLearningItem.objects.prefetch_related("translations").get(id=progress.item_id)
         return (
             t(user.language, "arabic_recall", arabic=escape(item.arabic_text)),
             InlineKeyboardMarkup(
@@ -113,13 +111,20 @@ def _prepare_dua(user):
 
 
 def _prepare_qada(user):
-    balances = balances_for_user(user)
-    prayer_total = sum(balances["prayers"].values())
+    summary = qada_summary(user)
+    current = summary["current"]
+    if current:
+        return t(
+            user.language,
+            "qada_current",
+            date=current.prayer_date.strftime("%d.%m.%Y"),
+            prayer=t(user.language, f"prayer_{current.prayer_type}"),
+            source=t(user.language, f"qada_source_{current.source}"),
+        )
     return t(
         user.language,
-        "qada_title",
-        prayers=t(user.language, "prayer_total", total=prayer_total),
-        fast=balances["fast"],
+        "qada_fast_remaining",
+        fast=balances_for_user(user)["fast"],
     )
 
 
@@ -146,9 +151,7 @@ async def send_scheduled_notification(notification):
         body, keyboard = await sync_to_async(_prepare_review, thread_sensitive=True)(user)
         text = f"{t(user.language, 'notification_review')}\n\n{body}"
     elif notification.kind == NotificationKind.ARABIC_REVIEW:
-        body, keyboard = await sync_to_async(_prepare_arabic_review, thread_sensitive=True)(
-            user
-        )
+        body, keyboard = await sync_to_async(_prepare_arabic_review, thread_sensitive=True)(user)
         text = f"{t(user.language, 'arabic_notification')}\n\n{body}"
     elif notification.kind == NotificationKind.QURAN:
         body = await sync_to_async(_prepare_passage, thread_sensitive=True)(user)

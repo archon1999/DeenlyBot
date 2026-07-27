@@ -14,16 +14,27 @@ from apps.arabic_learning.models import (
 from apps.islamic_calendar.services import upcoming_events
 from apps.learning.models import QuizAttempt, UserNameProgress
 from apps.worship.models import WorshipEntry, WorshipKind
-from apps.worship.services import balances_for_user
+from apps.worship.services import balances_for_user, has_pending_qada
 
 from .models import NotificationKind, ScheduledNotification, WeeklyReport
 
 
-def _random_local_datetime(day, start, end, tz):
+def _half_hour_slots(day, start, end, tz):
     start_dt = datetime.combine(day, start, tzinfo=tz)
     end_dt = datetime.combine(day, end, tzinfo=tz)
-    seconds = max(0, int((end_dt - start_dt).total_seconds()))
-    return start_dt + timedelta(seconds=random.randint(0, seconds))
+    if start_dt.minute not in {0, 30} or start_dt.second or start_dt.microsecond:
+        original_minute = start_dt.minute
+        start_dt = start_dt.replace(
+            minute=30 if original_minute < 30 else 0, second=0, microsecond=0
+        )
+        if original_minute >= 30:
+            start_dt += timedelta(hours=1)
+    slots = []
+    current = start_dt
+    while current < end_dt:
+        slots.append(current)
+        current += timedelta(minutes=30)
+    return slots
 
 
 def plan_daily_for_user(user, local_day=None):
@@ -38,20 +49,36 @@ def plan_daily_for_user(user, local_day=None):
     if UserArabicItemProgress.objects.filter(user=user).exists():
         kinds.append(NotificationKind.ARABIC_REVIEW)
     balances = balances_for_user(user)
-    if balances["fast"] or any(balances["prayers"].values()):
+    if balances["fast"] or has_pending_qada(user):
         kinds.append(NotificationKind.QADA)
     created = []
-    for index in range(preferences.random_messages_per_day):
-        due_at = _random_local_datetime(
-            local_day, preferences.random_window_start, preferences.random_window_end, tz
-        )
+    slots = _half_hour_slots(
+        local_day, preferences.random_window_start, preferences.random_window_end, tz
+    )
+    selected_slots = random.sample(slots, min(preferences.random_messages_per_day, len(slots)))
+    for index, due_at in enumerate(sorted(selected_slots)):
         notification, was_created = ScheduledNotification.objects.get_or_create(
-            dedupe_key=f"daily:{user.id}:{local_day.isoformat()}:{index}",
+            dedupe_key=(
+                f"daily:{user.id}:{local_day.isoformat()}:v{preferences.schedule_version}:{index}"
+            ),
             defaults={"user": user, "kind": random.choice(kinds), "due_at": due_at},
         )
         if was_created:
             created.append(notification)
     return created
+
+
+def replan_daily_for_user(user, local_day=None):
+    from .models import NotificationStatus
+
+    tz = ZoneInfo(user.timezone)
+    local_day = local_day or timezone.now().astimezone(tz).date()
+    ScheduledNotification.objects.filter(
+        user=user,
+        dedupe_key__startswith=f"daily:{user.id}:{local_day.isoformat()}:",
+        status=NotificationStatus.PENDING,
+    ).update(status=NotificationStatus.SKIPPED)
+    return plan_daily_for_user(user, local_day)
 
 
 def plan_event_reminders_for_user(user, local_day=None):
@@ -140,9 +167,7 @@ def build_weekly_report(user, period_end=None):
         "arabic_lessons_completed": arabic_lessons_completed,
         "arabic_items_total": UserArabicItemProgress.objects.filter(user=user).count(),
         "arabic_reviews": arabic_total,
-        "arabic_accuracy": (
-            round(arabic_correct * 100 / arabic_total) if arabic_total else 0
-        ),
+        "arabic_accuracy": (round(arabic_correct * 100 / arabic_total) if arabic_total else 0),
         "prayer_completed": prayer_completed,
         "fast_completed": fast_completed,
         "favorites_added": favorites_added,
