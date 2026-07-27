@@ -16,7 +16,7 @@ from apps.learning.models import QuizAttempt, UserNameProgress
 from apps.worship.models import WorshipEntry, WorshipKind
 from apps.worship.services import balances_for_user, has_pending_qada
 
-from .models import NotificationKind, ScheduledNotification, WeeklyReport
+from .models import NotificationKind, NotificationStatus, ScheduledNotification, WeeklyReport
 
 
 def _half_hour_slots(day, start, end, tz):
@@ -55,7 +55,17 @@ def plan_daily_for_user(user, local_day=None):
     slots = _half_hour_slots(
         local_day, preferences.random_window_start, preferences.random_window_end, tz
     )
-    selected_slots = random.sample(slots, min(preferences.random_messages_per_day, len(slots)))
+    now_local = timezone.now().astimezone(tz)
+    if local_day == now_local.date():
+        slots = [slot for slot in slots if slot > now_local]
+    daily_prefix = f"daily:{user.id}:{local_day.isoformat()}:"
+    already_committed = ScheduledNotification.objects.filter(
+        user=user,
+        dedupe_key__startswith=daily_prefix,
+        status__in=[NotificationStatus.QUEUED, NotificationStatus.SENT],
+    ).count()
+    remaining = max(0, preferences.random_messages_per_day - already_committed)
+    selected_slots = random.sample(slots, min(remaining, len(slots)))
     for index, due_at in enumerate(sorted(selected_slots)):
         notification, was_created = ScheduledNotification.objects.get_or_create(
             dedupe_key=(
@@ -69,8 +79,6 @@ def plan_daily_for_user(user, local_day=None):
 
 
 def replan_daily_for_user(user, local_day=None):
-    from .models import NotificationStatus
-
     tz = ZoneInfo(user.timezone)
     local_day = local_day or timezone.now().astimezone(tz).date()
     ScheduledNotification.objects.filter(

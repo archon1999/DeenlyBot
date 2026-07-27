@@ -27,7 +27,7 @@ def test_daily_plan_is_idempotent_and_in_user_window(user):
     preferences = user.notification_preferences
     preferences.random_messages_per_day = 3
     preferences.save()
-    local_day = date(2026, 7, 26)
+    local_day = date(2030, 7, 26)
     first = plan_daily_for_user(user, local_day)
     second = plan_daily_for_user(user, local_day)
     assert len(first) == 3
@@ -42,7 +42,7 @@ def test_qada_is_added_to_random_pool_only_when_debt_exists(user):
     user.notification_preferences.random_messages_per_day = 10
     user.notification_preferences.save()
     with patch("apps.notifications.services.random.choice", side_effect=lambda values: values[-1]):
-        kinds = {item.kind for item in plan_daily_for_user(user, date(2026, 7, 27))}
+        kinds = {item.kind for item in plan_daily_for_user(user, date(2030, 7, 27))}
     assert kinds == {NotificationKind.QADA}
 
 
@@ -54,7 +54,7 @@ def test_random_notifications_use_unique_half_hour_slots(user):
     preferences.random_window_end = time(14, 30)
     preferences.save()
 
-    planned = plan_daily_for_user(user, date(2026, 7, 28))
+    planned = plan_daily_for_user(user, date(2030, 7, 28))
     local_times = [item.due_at.time() for item in planned]
 
     assert len(local_times) == 10
@@ -77,9 +77,44 @@ def test_replan_command_replaces_legacy_daily_schedule(user):
 
     legacy = ScheduledNotification.objects.get(dedupe_key=legacy_key)
     assert legacy.status == "skipped"
-    assert ScheduledNotification.objects.filter(
-        user=user, dedupe_key__contains=":v1:"
-    ).count() == user.notification_preferences.random_messages_per_day
+    replanned = ScheduledNotification.objects.filter(user=user, dedupe_key__contains=":v1:")
+    assert replanned.count() <= user.notification_preferences.random_messages_per_day
+    assert all(item.due_at > timezone.now() for item in replanned)
+
+
+@pytest.mark.django_db
+def test_replanning_current_day_never_uses_past_slots(user):
+    preferences = user.notification_preferences
+    preferences.random_messages_per_day = 10
+    preferences.random_window_start = time(9, 0)
+    preferences.random_window_end = time(17, 0)
+    preferences.save()
+    now = timezone.make_aware(timezone.datetime(2026, 7, 27, 15, 10))
+
+    with patch("apps.notifications.services.timezone.now", return_value=now):
+        planned = plan_daily_for_user(user, date(2026, 7, 27))
+
+    assert [item.due_at.time() for item in planned] == [
+        time(15, 30),
+        time(16, 0),
+        time(16, 30),
+    ]
+
+
+@pytest.mark.django_db
+def test_replanning_does_not_exceed_daily_count_after_messages_were_sent(user):
+    local_day = date(2030, 7, 29)
+    ScheduledNotification.objects.create(
+        user=user,
+        kind=NotificationKind.DUA,
+        due_at=timezone.now(),
+        dedupe_key=f"daily:{user.id}:{local_day.isoformat()}:legacy:0",
+        status="sent",
+    )
+
+    planned = plan_daily_for_user(user, local_day)
+
+    assert len(planned) == user.notification_preferences.random_messages_per_day - 1
 
 
 @pytest.mark.django_db

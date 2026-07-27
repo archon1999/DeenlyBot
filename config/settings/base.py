@@ -106,7 +106,10 @@ Q_CLUSTER = {
     "bulk": 1,
     "orm": "default",
     "catch_up": False,
-    "save_limit": 250,
+    # Successful minute-level scheduler tasks are intentionally not persisted.
+    # This keeps SQLite writes serialized around application data instead of
+    # contending with Django Q result pruning.
+    "save_limit": -1,
     "ack_failures": True,
     "max_attempts": 3,
 }
