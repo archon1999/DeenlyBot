@@ -20,7 +20,7 @@ package-mode = false
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4"
 pytest-django = "^4.11"
-pytest-cov = "^6.2"
+pytest-cov = "^7.1"
 ruff = "^0.12"
 
 [tool.pytest.ini_options]
