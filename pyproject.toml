@@ -5,7 +5,7 @@ description = "Personal multilingual Islamic learning and worship Telegram bot"
 authors = [{name = "DeenlyBot"}]
 requires-python = ">=3.12,<3.14"
 dependencies = [
-    "Django>=5.2,<5.3",
+    "Django>=5.2.17,<5.3",
     "aiogram>=3.21,<4.0",
     "django-q2>=1.8,<2.0",
     "hijridate>=2.3,<3.0",
