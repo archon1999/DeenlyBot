@@ -1,14 +1,23 @@
+name: deenlybot
+
 x-deenly-service: &deenly-service
   build:
     context: .
-  image: deenly-bot:local
+    dockerfile: backend/Dockerfile
+    args:
+      - HTTP_PROXY
+      - HTTPS_PROXY
+      - NO_PROXY
+  image: ${DEENLY_BACKEND_IMAGE:-deenly-bot:local}
   env_file:
-    - .env
+    - backend/.env
   environment:
     DJANGO_SETTINGS_MODULE: config.settings.docker
     SQLITE_PATH: /data/db.sqlite3
   volumes:
     - deenly_data:/data
+    - deenly_static:/app/staticfiles
+    - deenly_media:/app/media
   restart: unless-stopped
 
 services:
@@ -22,14 +31,20 @@ services:
 
   web:
     <<: *deenly-service
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --timeout 60
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 1 --timeout 60
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
       migrate:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)",
+        ]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -48,5 +63,32 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        - HTTP_PROXY
+        - HTTPS_PROXY
+        - NO_PROXY
+    image: ${DEENLY_FRONTEND_IMAGE:-deenly-frontend:local}
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - deenly_static:/srv/django-static:ro
+      - deenly_media:/srv/django-media:ro
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1/health/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 volumes:
   deenly_data:
+    name: ${DEENLY_DATA_VOLUME:-deenlybot_deenly_data}
+  deenly_static:
+  deenly_media:

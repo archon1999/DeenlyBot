@@ -1,0 +1,11 @@
+[Unit]
+Description=Wait for Deenly domain activation before issuing TLS
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=30min
+AccuracySec=1min
+Unit=deenly-tls-activation.service
+
+[Install]
+WantedBy=timers.target

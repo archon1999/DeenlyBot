@@ -1,4 +1,7 @@
 .env
+.env.*
+!.env.example
+!**/.env.example
 .venv/
 .idea/
 __pycache__/
@@ -14,3 +17,15 @@ logs/
 runtime/
 media/
 staticfiles/
+node_modules/
+dist/
+vendor/
+*.zip
+backups/
+*.backup
+*.dump
+*.pem
+*.key
+frontend/coverage/
+frontend/test-results/
+frontend/playwright-report/

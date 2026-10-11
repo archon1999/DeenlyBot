@@ -1,0 +1,14 @@
+[Unit]
+Description=Finish Deenly HTTPS after registrar activation
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/DeenlyBot/current
+EnvironmentFile=-/etc/deenly/tls-proxy.env
+ExecStart=/usr/bin/python3 /home/DeenlyBot/current/ops/activate_tls.py
+TimeoutStartSec=10min
+UMask=0077
+PrivateTmp=true
+

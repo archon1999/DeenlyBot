@@ -1,0 +1,85 @@
+services:
+  migrate:
+    # This deployment reuses an already populated bot database. Do not reseed
+    # existing religious content or overwrite the owner's reviewed translations.
+    command: >-
+      sh -c "python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput"
+    environment: &production-environment
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_ALLOWED_HOSTS: deenly.uz,www.deenly.uz,127.0.0.1,localhost
+      DJANGO_CSRF_TRUSTED_ORIGINS: https://deenly.uz,https://www.deenly.uz
+      DATABASE_ENGINE: postgresql
+      POSTGRES_DB: ${POSTGRES_DB:-deenly}
+      POSTGRES_USER: ${POSTGRES_USER:-deenly}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      QF_CREDENTIALS_FILE: /run/secrets/quran-foundation/${QF_ENV:-prelive}-credentials.json
+    secrets: &database-secrets
+      - postgres_password
+    volumes: &production-volumes
+      - deenly_data:/data:ro
+      - ./backend/runtime/quran-foundation:/run/secrets/quran-foundation:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+  web:
+    environment: *production-environment
+    secrets: *database-secrets
+    volumes: *production-volumes
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+  bot:
+    environment: *production-environment
+    secrets: *database-secrets
+    volumes: *production-volumes
+    mem_limit: 384m
+    depends_on:
+      postgres:
+        condition: service_healthy
+  worker:
+    environment: *production-environment
+    secrets: *database-secrets
+    volumes: *production-volumes
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+  frontend:
+    mem_limit: 128m
+  postgres:
+    image: ${DEENLY_POSTGRES_IMAGE:-postgres:17-alpine}
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_admin_password
+      APP_DB_USER: ${POSTGRES_USER:-deenly}
+      APP_DB_NAME: ${POSTGRES_DB:-deenly}
+    secrets:
+      - postgres_admin_password
+      - postgres_password
+    volumes:
+      - deenly_postgres:/var/lib/postgresql/data
+      - ./ops/postgres/init-app.sh:/docker-entrypoint-initdb.d/10-deenly.sh:ro
+    # No host port: only Deenly's private Docker network can reach this database.
+    command: postgres -c shared_buffers=64MB -c max_connections=50
+    mem_limit: 384m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  deenly_postgres:
+    name: ${DEENLY_POSTGRES_VOLUME:-deenlybot_deenly_postgres}
+
+secrets:
+  postgres_password:
+    file: ./backend/runtime/postgres/password
+  postgres_admin_password:
+    file: ./backend/runtime/postgres/admin-password

@@ -1,123 +1,193 @@
-# 🌙 DeenlyBot
+# Deenly.uz
 
-Личный мультиязычный Telegram-бот на Django для изучения Ислама и учета поклонения. Интерфейс и учебные материалы доступны на русском, узбекском и английском языках.
+Shaxsiy islomiy o‘rganish va ibodat platformasi: Django backend, Telegram bot
+va Minimal UI TypeScript v7.4.0 asosidagi React + MUI frontend. Interfeys va
+kontent UZ/RU/EN tillarida ishlaydi. Bot va sayt bitta `TelegramUser` profili,
+umumiy domain servislaridan foydalanadi. Lokal baza SQLite, production esa
+alohida Docker konteyneridagi PostgreSQL. Bot, sayt va worker bir production
+bazasiga ulanadi; lokal baza production ma’lumotlarini almashtirmaydi.
 
-## Возможности
+## Tuzilma
 
-- единый раздел «99 имён Аллаха»: имя добавляется в прогресс только после подтверждения;
-- встроенное повторение, список изученных имён и четыре вида тестов только по знакомым именам;
-- курс арабского языка Корана из 38 уроков: 16 по алфавиту, 12 по словам и фразам и 10 по грамматике и фактам;
-- 95 арабских карточек, пять типов тестов и интервальное повторение;
-- библиотека известных аятов, сур и дуа с транскрипциями RU/EN/UZ;
-- пагинация библиотек Коран и Дуа по 10 карточек;
-- личная коллекция избранных аятов и дуа;
-- журнал када-намазов и дней поста;
-- исламский календарь с предупреждением о расчётных датах;
-- случайные полезные напоминания и еженедельный отчёт о прогрессе;
-- личный режим: первый пользователь Telegram становится владельцем бота;
-- Django Admin для управления материалами, источниками и настройками.
-
-Источники сохраняются в базе для проверки через Admin, но не показываются пользователю. Учебные переводы и пояснения не заменяют признанный тафсир или консультацию квалифицированного учёного.
-
-## Запуск через Docker
-
-Потребуются Docker Engine и Docker Compose v2.
-
-```bash
-cp .env.example .env
-# Заполните BOT_TOKEN и при желании BOT_OWNER_TELEGRAM_ID в .env
-# Если сервер не имеет прямого доступа к Telegram API, задайте TELEGRAM_PROXY
-docker compose up -d --build
+```text
+Deenly.uz/
+  backend/
+    apps/             domain servislar, Telegram bot va REST API
+    config/           Django sozlamalari va URLlar
+    tests/            bot, domain va API testlari
+    manage.py
+    pyproject.toml
+    poetry.lock
+    Dockerfile
+  frontend/
+    src/app/          providers, routes, layouts, Minimal theme
+    src/modules/      application/domain/data-access/ui qatlamlari
+    src/shared/       generic API, UI, hooks va utilities
+    public/           statik assetlar
+    package.json
+    Dockerfile
+  ops/nginx/          SPA, API va Admin uchun bitta origin
+  docs/               research va API integratsiya kontrakti
+  vendor/             original Minimal ZIP, Git va Dockerga kiritilmaydi
+  docker-compose.yml
 ```
 
-Compose автоматически выполняет миграции, начальное заполнение базы и создает расписания. Затем запускаются:
+Frontend oqimi: `UI → application hooks → domain repository contract → data-access → HTTP client`.
+DTO mapperlari API `snake_case` maydonlarini domain modellariga o‘giradi.
+Domain React va transport kodlariga bog‘lanmaydi, sahifalar feature komponentlarni
+birlashtiradi. Bu tuzilma Nexa frontend arxitekturasiga mos.
 
-- `web` — Django Admin на `http://127.0.0.1:8000/admin/`;
-- `bot` — Telegram long polling;
-- `worker` — один Django Q2 worker;
-- `migrate` — одноразовая подготовка базы.
+## Interfeys
 
-Полезные команды:
+Minimalning `vite-ts` full versiyasidagi Course, App Welcome, Post va Account
+kompozitsiyalari Deenlyning haqiqiy ma’lumotlariga moslashtirilgan. `cp_uz`
+LearningLayout namunasiga o‘xshash sticky yuqori header ishlatiladi: keng ekranda
+markaziy havolalar, tor ekranda esa tepadan ochiladigan guruhlangan menyu.
+Doimiy sidebar va pastki navigatsiya yo‘q. Yorug‘/qorong‘i ko‘rinish, UZ/RU/EN
+yorliqlar va arabcha matnlar uchun alohida RTL tipografiya saqlangan.
 
-```bash
-docker compose ps
-docker compose logs -f bot worker
-docker compose down
-docker compose run --rm web python manage.py createsuperuser
-docker compose run --rm bot python manage.py update_bot_profile
-```
+Bugun, ismlar, arab tili, kutubxona, qazo, taqvim, hisobotlar va sozlamalar
+REST APIga ulangan. Dizayndagi progress va statistikalar demo KPI emas.
 
-SQLite хранится в именованном volume `deenly_data`, поэтому `docker compose down` не удаляет данные. Для полного удаления данных потребуется явная команда `docker compose down -v`.
+Headerda CP namunasidagi Solar Linear outlined ikonlar ishlatiladi. Tanlangan
+ikonlar va til bayroqlari lokal assetlar: menyuni ochish uchun tashqi ikon
+servisi kerak emas. Qidiruv bo‘limlar bo‘yicha ishlaydi; `Ctrl/Cmd+K` bilan
+ochiladi. Sozlamalar va profil hisob dropdownida, bosh sahifa esa logoda.
+Menyu va drawer fonlari gradientsiz. Sana kiritish MUI DatePicker orqali
+UZ/RU/ENga moslashtirilgan. Bosh sahifadagi muhim sanalar bugundan keyingi
+6 kalendar oyini qamraydi; oy ko‘rinishiga bog‘liq sanalar `Taxminiy` deb belgilanadi.
+Arab tili kartalari darsning haqiqiy dastlabki harf yoki so‘zlarini ko‘rsatadi.
 
-## Локальная разработка
+## Mahalliy ishga tushirish
+
+Python 3.12 yoki 3.13, Poetry 2 va Node.js 22 kerak.
+
+Backend:
 
 ```powershell
+cd backend
 poetry install
-Copy-Item .env.example .env
+# Birinchi marta: Copy-Item .env.example .env
 poetry run python manage.py migrate
 poetry run python manage.py bootstrap_bot
+poetry run python manage.py runserver 127.0.0.1:8001
 ```
 
-Для разработки процессы запускаются в отдельных терминалах:
+Frontend alohida terminalda:
 
 ```powershell
-poetry run python manage.py runbot
-poetry run python manage.py qcluster
-poetry run python manage.py runserver
+cd frontend
+npm ci
+npm run dev
 ```
 
-Обновление красивого локализованного профиля BotFather — названия, About, описания, команд и menu button:
+Vite `http://localhost:5173`da ochiladi va API so‘rovlarini `127.0.0.1:8001`ga
+proxy qiladi. Development serverlar loopbackga bog‘lanadi.
+
+Bot va worker kerak bo‘lsa backend papkasidan alohida terminallarda
+`poetry run python manage.py runbot` va `poetry run python manage.py qcluster`
+bajariladi. Production botning ayni tokeni serverda polling qilayotgan bo‘lsa,
+mahalliy ikkinchi pollingni ishga tushirmang; development uchun alohida bot kerak.
+
+## Akkaunt va Telegram orqali kirish
+
+Saytga mehmon sifatida, email/parol bilan yoki tasdiqlangan Telegram orqali
+kirish mumkin. Mehmon profili ham bazada saqlanadi va sessiya cookie orqali
+aniqlanadi. Cookie yo‘qolsa mehmon progressiga qayta kirib bo‘lmaydi; uni
+email/parolli akkauntga aylantirish profil va mavjud progressni saqlaydi.
+Email hozir login identifikatori: email tasdiqlash va parolni email orqali
+tiklash bu bosqichda yo‘q.
+
+Profil sahifasida ismni o‘zgartirish, akkauntni saqlash va Telegram botni
+bog‘lash mavjud. Botga bog‘lanmagan profillarga Telegram eslatmalari
+yuborilmaydi. Botning shaxsiy owner tekshiruvi saqlangan; veb mehmon/member
+kirishi alohida sessiya va profilga tegishlilik tekshiruvlaridan o‘tadi.
+
+Sayt login brauzer sessiyasiga bog‘langan qisqa muddatli challenge yaratadi.
+Telegramda bot egasi brauzer va botdagi kodni solishtirib, alohida tugma bilan
+tasdiqlagandan keyin sayt o‘sha mavjud profilga Django sessiyasi bilan kiradi.
+Havolani ochishning o‘zi kirishni yoki bog‘lashni tasdiqlamaydi. Faqat o‘zingiz
+boshlagan so‘rovni tasdiqlang. Mini App raw `initData`si backendda tekshiriladi;
+browser yuborgan oddiy Telegram ID login dalili emas.
+
+Bot approval handleri sayt bilan bir DBga ulangan bo‘lishi kerak. Mahalliy va
+production turli DBlardan foydalansa, production bot mahalliy sayt challengeini
+ko‘rmaydi. Productionga chiqarilganda sayt va bot birga yangilanadi.
+
+Sayt sessiyasi uchun Django auth user bilan mavjud Telegram profilining
+OneToOne bog‘lanishi qo‘llanadi; progress yozuvlarining FKlari ko‘chirilmaydi.
+
+Telegramni bog‘lashda ikki profilda ham progress bo‘lsa yoki Telegram profili
+boshqa ro‘yxatdan o‘tgan akkauntga tegishli bo‘lsa, xavfsiz konflikt qaytariladi:
+ikkala profil saqlanadi, ma’lumotlar yashirincha birlashtirilmaydi.
+
+## Docker
+
+Backend `.env`ni to‘ldiring, keyin root papkadan:
 
 ```powershell
-poetry run python manage.py update_bot_profile
+docker compose up -d --build
+docker compose ps
+docker compose logs -f web bot worker frontend
 ```
 
-## Проверки
+Frontend va API `http://127.0.0.1:8080` orqali bitta originda ochiladi. Backend
+Admin `http://127.0.0.1:8000/admin/`da ham loopback orqali mavjud. Domen va HTTPS
+uchun tashqi reverse proxy 8080ga yo‘naltiriladi.
+
+Compose project nomi mavjud deployment identifikatori bilan bir xil saqlangan.
+SQLite volume default nomi `deenlybot_deenly_data`; root papka nomining o‘zgarishi
+yangi bo‘sh production bazasini yaratmaydi. Boshqa volume uchun
+`DEENLY_DATA_VOLUME`ni aniq belgilang. `docker compose down` datani saqlaydi;
+volume o‘chirish alohida va ongli data yo‘qotish operatsiyasi hisoblanadi.
+
+Backend image faqat `backend/` kodidan yig‘iladi. Frontend Node build stage ichida
+yig‘ilib, Nginx orqali tarqatiladi; Node production runtime emas. Django static
+fayllari migrate/web/frontend o‘rtasida alohida static volume orqali ulashiladi.
+Bot tokeni, proxy credentiallari va boshqa secretlar frontend buildiga kirmaydi.
+SQLite va jarayon ichidagi auth rate-limit cache uchun web bitta Gunicorn
+worker bilan ishlaydi; ko‘p worker qo‘shishdan oldin umumiy cache kerak bo‘ladi.
+
+## Tekshiruvlar
 
 ```powershell
+cd backend
 poetry run ruff check .
 poetry run python manage.py check
 poetry run python manage.py makemigrations --check --dry-run
 poetry run pytest
 ```
 
-## CI/CD
-
-Workflow `.github/workflows/ci-cd.yml` на каждом pull request и push в `main` запускает линтер, Django checks, проверку миграций и тесты, затем собирает Docker-образ. После успешного push в `main` образ публикуется в GitHub Container Registry:
-
-```text
-ghcr.io/archon1999/deenlybot:latest
+```powershell
+cd frontend
+npm run check:architecture
+npm run typecheck
+npm test
+npm run build
+npm run lint
 ```
 
-Для деплоя на личный сервер достаточно войти в GHCR, скачать образ и запустить его с тем же `.env` и постоянным volume SQLite. Секреты Telegram не передаются в GitHub Actions.
+CI backend testlarini SQLite va PostgreSQL’da, frontend qatlam chegaralari,
+lint, test va typecheck/buildni bajaradi. Main branch muvaffaqiyatli tekshirilgach
+ikkala image GHCRga commit SHA bilan chiqariladi va cheklangan SSH kaliti orqali
+productionga avtomatik deploy qilinadi. Prod tokenlari va baza parollari serverda
+qoladi; GitHub’da faqat cheklangan deploy kaliti va tekshirilgan SSH host kaliti saqlanadi.
 
-## Основные команды бота
+## Hujjatlar va litsenziya
 
-```text
-/start       /names       /arabic
-/library     /favorites   /qada
-/calendar    /progress    /settings
-/help
-```
+- [Platforma researchi](docs/WEB_PLATFORM_RESEARCH.md)
+- [Dizayn researchi](docs/DESIGN_RESEARCH.md)
+- [API kontrakti](docs/API_CONTRACT.md)
+- [Production deploy va progressni saqlash](docs/PRODUCTION_RUNBOOK.md)
+- [Frontend qatlamlari](frontend/AGENTS.md)
 
-Историческая очередь када настраивается один раз командой
-`/qada_start 23 05 2026 fajr`. Пропущенные после этой даты намазы
-добавляются командами `/qada_add 27 07 fajr` или
-`/qada_add 27 07 2026 dhuhr`. Допустимы пять обязательных намазов:
-`fajr`, `dhuhr`, `asr`, `maghrib`, `isha`; витр пока не учитывается.
-
-Случайные сообщения настраиваются в `/settings`. Планировщик выбирает
-уникальные моменты внутри указанного окна только с минутами `:00` и `:30`.
-После обновления со старой версии расписание можно перестроить командой
-`docker compose run --rm bot python manage.py replan_random_notifications`.
-
-Тексты сложных Telegram-сообщений находятся в
-`apps/telegram_bot/templates/telegram/<language>/<message>.html`. Короткие
-подписи кнопок и уведомлений остаются в `i18n.py`.
-
-## Безопасность
-
-- `.env`, SQLite, логи, media и runtime-файлы исключены из Git;
-- токен бота не встраивается в Docker image и не публикуется в GitHub;
-- веб-интерфейс Docker по умолчанию доступен только с локального компьютера;
-- перед копированием SQLite остановите bot и worker или используйте online backup SQLite.
+Minimalning original litsenziya havolalari `frontend/LICENSE.md`da saqlangan.
+Solar ikonlari atribusiyasi `frontend/NOTICE.md`da. Tanlangan Arch D logosi,
+uning original konsepti va prompti `docs/logo-concepts/`da. Asosiy interfeys va
+favicon bir xil production SVG geometriyasidan foydalanadi; boshqa variantlar
+va eski template logolari aktiv loyihadan olib tashlangan.
+Original ZIP `vendor/`da; uni `.env`, SQLite va runtime fayllari bilan birga Git
+yoki Docker kontekstiga qo‘shmang. Nexa faqat arxitektura namuna sifatida o‘qildi;
+uning TMS biznes modullari va credentiallari ko‘chirilmaydi.
+`cp_uz`dan faqat navigatsiya va vizual tuzilma o‘rganildi; uning biznes kodi,
+foydalanuvchi ma’lumotlari yoki sozlamalari ko‘chirilmagan.

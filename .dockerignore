@@ -2,7 +2,10 @@
 .github
 .idea
 .env
+**/.env
+**/.env.*
 .venv
+**/.venv
 __pycache__
 *.py[cod]
 *.sqlite3*
@@ -19,3 +22,15 @@ logs
 runtime
 media
 staticfiles
+**/staticfiles
+**/runtime
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/node_modules
+**/dist
+vendor
+*.zip
+docs
+frontend/test-results
+frontend/playwright-report
