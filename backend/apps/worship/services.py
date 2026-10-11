@@ -5,6 +5,8 @@ from django.db import transaction
 from django.db.models import Case, IntegerField, Sum, Value, When
 from django.utils import timezone
 
+from apps.users.models import TelegramUser
+
 from .models import (
     FastOperationReceipt,
     PrayerType,
@@ -229,6 +231,7 @@ def add_debt(user, kind, amount, prayer_type="", note=""):
         raise ValueError("Prayer type is required")
     if kind == WorshipKind.FAST:
         prayer_type = ""
+    TelegramUser.objects.select_for_update().only("id").get(pk=user.pk)
     return WorshipEntry.objects.create(
         user=user,
         kind=kind,
@@ -241,6 +244,7 @@ def add_debt(user, kind, amount, prayer_type="", note=""):
 
 @transaction.atomic
 def complete_one(user, kind, prayer_type=""):
+    TelegramUser.objects.select_for_update().only("id").get(pk=user.pk)
     balances = balances_for_user(user)
     current = (
         balances["fast"] if kind == WorshipKind.FAST else balances["prayers"].get(prayer_type, 0)
@@ -263,6 +267,9 @@ def record_fast_operation(user, operation_id, action, amount=1):
         raise ValueError("Invalid fast operation")
     if action == "complete" and amount != 1:
         raise ValueError("Complete one fast at a time")
+    # Lock a row that always exists, even before the first receipt is created.
+    # This also serializes balance checks with bot-side ledger operations.
+    TelegramUser.objects.select_for_update().only("id").get(pk=user.pk)
     existing = FastOperationReceipt.objects.filter(user=user, operation_id=operation_id).first()
     if existing:
         if existing.action != action or existing.amount != amount:

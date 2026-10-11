@@ -3,7 +3,7 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from rest_framework.exceptions import APIException, ValidationError
 
 from apps.users.models import AccountCredential, AccountKind, NotificationPreference, TelegramUser
@@ -38,8 +38,25 @@ def create_guest(account=None, *, language="uz", timezone="Asia/Tashkent"):
     return account, profile
 
 
-@transaction.atomic
 def register_account(*, email, password, first_name, account=None, language=None):
+    try:
+        return _register_account(
+            email=email,
+            password=password,
+            first_name=first_name,
+            account=account,
+            language=language,
+        )
+    except IntegrityError:
+        # A concurrent request may win after the initial existence check. The
+        # inner atomic/savepoint has rolled back before checking the winner.
+        if AccountCredential.objects.filter(email__iexact=email.strip().casefold()).exists():
+            raise ValidationError({"email": "An account with this email already exists"}) from None
+        raise
+
+
+@transaction.atomic
+def _register_account(*, email, password, first_name, account=None, language=None):
     email = email.strip().casefold()
     if (
         AccountCredential.objects.filter(email__iexact=email).exists()
