@@ -23,7 +23,7 @@ export function LibraryProgress({
         },
         {
           label: labels.accuracy,
-          value: `${stats.accuracy}%`,
+          value: stats.answers ? `${stats.accuracy}%` : '—',
           color: 'primary',
           icon: <OutlineIcon name="library" width={28} />,
         },

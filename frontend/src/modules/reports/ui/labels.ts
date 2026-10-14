@@ -3,6 +3,9 @@ import { useLocale } from 'src/shared/i18n';
 const labels = {
   uz: {
     title: 'Shaxsiy hisobotlar',
+    firstStep: 'O‘rganish yo‘lingiz shu yerdan boshlanadi',
+    firstStepHint:
+      'Birinchi ism yoki darsni o‘rganing. Natijalaringiz va haftalik hisobotlar shu yerda jamlanadi.',
     coverage: 'o‘rganish yo‘li',
     remaining: 'Hali o‘rganilmagan',
     allTime: 'Jami davr uchun',
@@ -52,6 +55,9 @@ const labels = {
   },
   ru: {
     title: 'Личные отчёты',
+    firstStep: 'Ваш путь к знаниям начинается здесь',
+    firstStepHint:
+      'Изучите первое имя или урок. Здесь появятся ваши результаты и недельные отчёты.',
     coverage: 'учебного пути',
     remaining: 'Ещё не изучено',
     allTime: 'За всё время',
@@ -101,6 +107,9 @@ const labels = {
   },
   en: {
     title: 'Personal reports',
+    firstStep: 'Your learning journey starts here',
+    firstStepHint:
+      'Study your first name or lesson. Your progress and weekly reports will appear here.',
     coverage: 'of your learning path',
     remaining: 'Not yet studied',
     allTime: 'All time',

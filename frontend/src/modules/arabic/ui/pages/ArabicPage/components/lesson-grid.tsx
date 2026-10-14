@@ -5,6 +5,7 @@ import type { ArabicLesson, ArabicCategory } from '../../../../domain';
 import { Box, Card, Chip, Alert, Stack, Button, Typography } from '@mui/material';
 
 import { Iconify } from 'src/shared/ui/iconify';
+import { DeenlyArch } from 'src/shared/ui/deenly-arch';
 import { learningCover } from 'src/shared/ui/learning-cover';
 
 export const categoryTones: Record<ArabicCategory, CoverTone> = {
@@ -54,17 +55,15 @@ export function LessonGrid({
                   minHeight: 154,
                 })}
               >
-                <Box
-                  aria-hidden
+                <DeenlyArch
                   sx={{
                     position: 'absolute',
-                    width: 190,
-                    height: 190,
-                    right: -40,
-                    top: -45,
-                    background:
-                      'url(/assets/background/shape-circle-3.svg) center/contain no-repeat',
-                    opacity: 0.07,
+                    color: 'inherit',
+                    width: 150,
+                    height: 188,
+                    right: -20,
+                    bottom: -30,
+                    opacity: 0.7,
                   }}
                 />
                 <Stack

@@ -27,15 +27,6 @@ export function LearningTracks({
 }) {
   const tracks = [
     {
-      title: labels.namesStats,
-      subtitle: data.nextName?.transcription ?? labels.allNames,
-      count: data.stats.namesIntroduced,
-      total: data.stats.namesTotal,
-      arabic: 'الأسماء',
-      href: data.nextName ? `/names?name=${data.nextName.id}` : '/names',
-      action: labels.openName,
-    },
-    {
       title: labels.arabic,
       subtitle: data.nextArabicLesson?.title ?? labels.allLessons,
       count: data.stats.arabicLessonsCompleted,
@@ -47,7 +38,7 @@ export function LearningTracks({
   ];
   return (
     <Card sx={{ height: '100%' }}>
-      <CardHeader title={labels.continue} sx={{ pb: 1 }} />
+      <CardHeader title={labels.explore} sx={{ pb: 1 }} />
       <Stack divider={<Divider sx={{ borderStyle: 'dashed' }} />} sx={{ p: 3 }} spacing={3}>
         {tracks.map((track) => (
           <Stack key={track.href} direction={{ xs: 'column', sm: 'row' }} spacing={2.5}>
@@ -95,6 +86,21 @@ export function LearningTracks({
             </Stack>
           </Stack>
         ))}
+        <Stack spacing={1.5}>
+          <Typography variant="subtitle1">{labels.library}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {labels.libraryHint}
+          </Typography>
+          <Button
+            component={Link}
+            to="/library"
+            size="small"
+            endIcon={<Iconify icon="solar:arrow-right-linear" width={18} />}
+            sx={{ alignSelf: 'flex-start', px: 0 }}
+          >
+            {labels.libraryAction}
+          </Button>
+        </Stack>
       </Stack>
     </Card>
   );

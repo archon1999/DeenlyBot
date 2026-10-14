@@ -6,6 +6,27 @@ profile through Django session authentication and never accept a client user ID.
 Mutations require CSRF. Lists have server-side language selection from profile.
 Current source identity and progress foreign keys stay on `TelegramUser`.
 
+## Reading provenance
+
+Name records, Arabic lesson details, library records and available library analyses
+include an additive `provenance` object. Its fields are `kind`, `title`, `url`,
+`reference` and `meaning_is_summary`. Clients may receive older responses without
+this object and must not invent a source or verification badge.
+
+The object identifies the stored reference, not the author of the local meaning
+or an endorsement of the learning explanation. Quran records link to their exact
+starting verse; dua references preserve the recorded report/verse citation.
+Only recognized, explicitly stored reference numbers are resolved to individual
+pages. Other valid source URLs remain as recorded. Unsafe URLs are omitted.
+
+Existing seeded meanings are concise educational renderings. The reader calls
+them "Meaning for study" and calls visibly abridged meanings "Concise meaning",
+with an explicit notice that they are not full translations. Linguistic analyses
+retain their own reference and are distinguished from tafsir. Audio credits and
+licenses remain independent and unchanged. No source verification flag is exposed
+as a scholarly certification. This presentation change does not rewrite content,
+renumber materials, change progress, or require a database migration.
+
 ## Auth
 
 - `GET auth/session/`: `{authenticated, profile, bot_username}`. Anonymous profile

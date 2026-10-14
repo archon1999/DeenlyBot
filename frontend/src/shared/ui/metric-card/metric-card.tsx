@@ -1,8 +1,8 @@
 import type { CardProps } from '@mui/material/Card';
 
-import { varAlpha } from 'minimal-shared/utils';
-
 import { Box, Card, Stack, Divider, Typography, LinearProgress } from '@mui/material';
+
+import { DeenlyArch } from 'src/shared/ui/deenly-arch';
 
 type MetricColor = 'primary' | 'secondary' | 'info' | 'success' | 'warning';
 type Props = CardProps & {
@@ -35,19 +35,16 @@ export function MetricCard({
       ]}
       {...other}
     >
-      <Box
-        aria-hidden
-        sx={(theme) => ({
+      <DeenlyArch
+        sx={{
           position: 'absolute',
-          right: -88,
-          top: -44,
-          width: 160,
-          height: 160,
-          borderRadius: 3,
-          transform: 'rotate(40deg)',
-          pointerEvents: 'none',
-          background: `linear-gradient(to right, ${varAlpha(theme.vars.palette[color].mainChannel, 0.14)}, transparent)`,
-        })}
+          right: -18,
+          bottom: -36,
+          width: 110,
+          height: 138,
+          color: `${color}.main`,
+          opacity: 0.65,
+        }}
       />
       <Box
         sx={{

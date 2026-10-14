@@ -6,6 +6,8 @@ import { varAlpha } from 'minimal-shared/utils';
 
 import { Box, Card, Alert, Stack, Button, Typography } from '@mui/material';
 
+import { ContentSource } from 'src/shared/ui/content-source';
+
 export function LibraryAnalysisView({
   analysis,
   labels,
@@ -132,6 +134,7 @@ export function LibraryAnalysisView({
           </Stack>
         </Card>
       ))}
+      <ContentSource source={analysis.provenance} />
     </Stack>
   );
 }

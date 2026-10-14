@@ -1,6 +1,8 @@
 import type { AudioTrackDto } from 'src/shared/audio/audio.dto';
+import type { ContentProvenanceDto } from 'src/shared/api/content-provenance';
 
 export type LibraryItemDto = {
+  provenance?: ContentProvenanceDto;
   id: number;
   kind: 'ayah' | 'surah' | 'dua';
   title: string;
@@ -14,6 +16,7 @@ export type LibraryItemDto = {
 };
 export type LibraryDetailDto = LibraryItemDto & {
   analysis: {
+    provenance?: ContentProvenanceDto;
     summary: string;
     context: string;
     explanation: string;

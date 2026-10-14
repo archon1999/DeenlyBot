@@ -24,26 +24,26 @@ export function DashboardStats({
       <MetricCard
         label={labels.namesStats}
         value={`${stats.namesIntroduced} / ${stats.namesTotal}`}
-        icon={<Iconify icon="solar:file-text-bold" width={28} />}
+        icon={<Iconify icon="solar:notebook-bookmark-linear" width={28} />}
         color="primary"
       />
       <MetricCard
         label={labels.arabicStats}
         value={`${stats.arabicLessonsCompleted} / ${stats.arabicLessonsTotal}`}
-        icon={<Iconify icon="solar:letter-bold" width={28} />}
+        icon={<Iconify icon="solar:letter-linear" width={28} />}
         color="info"
       />
       <MetricCard
         label={labels.accuracy}
         value={stats.totalAnswers ? `${stats.accuracy}%` : '—'}
         helper={stats.totalAnswers ? undefined : labels.noAnswers}
-        icon={<Iconify icon="solar:verified-check-bold" width={28} />}
+        icon={<Iconify icon="solar:check-circle-linear" width={28} />}
         color="success"
       />
       <MetricCard
         label={labels.qadaStats}
         value={stats.qadaCompleted}
-        icon={<Iconify icon="solar:check-circle-bold" width={28} />}
+        icon={<Iconify icon="solar:check-circle-linear" width={28} />}
         color="warning"
       />
     </Box>

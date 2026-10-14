@@ -1,8 +1,10 @@
 import type { AudioTrack } from 'src/shared/domain/audio';
+import type { ContentProvenance } from 'src/shared/domain/content-provenance';
 
 export type NameStatus = 'new' | 'learning' | 'learned';
 export type NameQuizType = 'name_meaning' | 'meaning_name' | 'number_name' | 'name_number';
 export type AllahName = {
+  provenance?: ContentProvenance;
   id: number;
   order: number;
   arabic: string;

@@ -20,10 +20,10 @@ from .views import validated
 class LibraryDetailView(APIView):
     def get(self, request, kind, item_id):
         if kind == "dua":
-            item = Dua.objects.prefetch_related("translations").get(id=item_id, is_published=True)
+            item = Dua.objects.select_related("source").prefetch_related("translations").get(id=item_id, is_published=True)
             lookup = {"dua_id": item.id}
         elif kind in ("ayah", "surah"):
-            item = QuranPassage.objects.prefetch_related("translations").get(
+            item = QuranPassage.objects.select_related("source").prefetch_related("translations").get(
                 id=item_id, passage_type=kind, is_published=True
             )
             lookup = {"passage_id": item.id}

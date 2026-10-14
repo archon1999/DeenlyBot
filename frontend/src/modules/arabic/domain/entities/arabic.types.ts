@@ -1,4 +1,5 @@
 import type { AudioTrack } from 'src/shared/domain/audio';
+import type { ContentProvenance } from 'src/shared/domain/content-provenance';
 
 export type ArabicCategory =
   | 'alphabet'
@@ -39,7 +40,11 @@ export type ArabicItem = {
   quranReference?: string;
   quranPassage?: { id: number; kind: 'ayah' | 'surah' };
 };
-export type ArabicLessonDetail = ArabicLesson & { explanation: string; items: ArabicItem[] };
+export type ArabicLessonDetail = ArabicLesson & {
+  provenance?: ContentProvenance;
+  explanation: string;
+  items: ArabicItem[];
+};
 export type ArabicStats = {
   completedLessons: number;
   totalLessons: number;

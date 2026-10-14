@@ -1,6 +1,8 @@
-import { Box, Card, Alert, Stack, Typography, CardHeader } from '@mui/material';
+import { Box, Card, Alert, Stack, Button, Typography, CardHeader } from '@mui/material';
 
 import { QueryState } from 'src/shared/ui/query-state';
+import { RouterLink } from 'src/app/routes/components';
+import { DeenlyArch } from 'src/shared/ui/deenly-arch';
 import { DashboardContent } from 'src/app/layouts/dashboard';
 
 import { useReportsLabels } from '../../labels';
@@ -13,6 +15,15 @@ import { ReportInsights } from './components/report-insights';
 export function ReportsPage() {
   const query = useReports();
   const labels = useReportsLabels();
+  const stats = query.data?.stats;
+  const hasActivity =
+    stats &&
+    (stats.namesIntroduced > 0 ||
+      stats.arabicItemsIntroduced > 0 ||
+      stats.arabicLessonsCompleted > 0 ||
+      stats.totalAnswers > 0 ||
+      stats.qadaCompleted > 0 ||
+      Boolean(query.data?.weeklyReports.length));
   return (
     <DashboardContent maxWidth="xl">
       <Stack spacing={4}>
@@ -23,7 +34,26 @@ export function ReportsPage() {
           </Typography>
         </Box>
         <QueryState isPending={query.isPending} error={query.error} onRetry={() => query.refetch()}>
-          {query.data && (
+          {query.data && !hasActivity && (
+            <Card sx={{ p: { xs: 3, md: 5 }, position: 'relative', overflow: 'hidden' }}>
+              <DeenlyArch
+                sx={{ position: 'absolute', right: -20, bottom: -70, width: 220, height: 275 }}
+              />
+              <Stack spacing={2} sx={{ position: 'relative', maxWidth: 560 }}>
+                <Typography variant="h5">{labels.firstStep}</Typography>
+                <Typography color="text.secondary">{labels.firstStepHint}</Typography>
+                <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1.5}>
+                  <Button component={RouterLink} href="/names" variant="contained">
+                    {labels.namesGroup}
+                  </Button>
+                  <Button component={RouterLink} href="/arabic" variant="outlined">
+                    {labels.arabicGroup}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Card>
+          )}
+          {query.data && hasActivity && (
             <>
               <ProgressCards
                 stats={query.data.stats}

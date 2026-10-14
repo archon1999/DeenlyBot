@@ -129,7 +129,7 @@ class NamesView(APIView):
         progress = {row.name_id: row for row in UserNameProgress.objects.filter(user=profile)}
         next_name = next_name_for_user(profile)
         next_id = next_name.id if next_name else None
-        names = NameOfAllah.objects.filter(is_published=True).prefetch_related("translations")
+        names = NameOfAllah.objects.filter(is_published=True).select_related("source").prefetch_related("translations")
         return Response(
             {
                 "results": [
@@ -256,7 +256,7 @@ class LibraryView(APIView):
         )
         results = []
         if kind in ("ayah", "surah", "favorites"):
-            passages = QuranPassage.objects.filter(is_published=True).prefetch_related(
+            passages = QuranPassage.objects.filter(is_published=True).select_related("source").prefetch_related(
                 "translations"
             )
             if kind != "favorites":
@@ -270,7 +270,7 @@ class LibraryView(APIView):
                 for passage in passages
             )
         if kind in ("dua", "favorites"):
-            duas = Dua.objects.filter(is_published=True).prefetch_related("translations")
+            duas = Dua.objects.filter(is_published=True).select_related("source").prefetch_related("translations")
             if kind == "favorites":
                 duas = duas.filter(id__in=dua_ids)
             results.extend(

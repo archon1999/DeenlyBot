@@ -11,6 +11,7 @@ from apps.arabic_learning.models import (
 )
 from apps.arabic_learning.services import localized_item, localized_lesson
 from apps.content.models import Favorite, NameOfAllah
+from apps.content.provenance import content_provenance
 from apps.content.services import localized_library_item, localized_name
 from apps.content.study_services import resolve_library_reference
 from apps.islamic_calendar.services import add_calendar_months, upcoming_events
@@ -44,6 +45,7 @@ def name_dto(name, profile, *, progress=None, next_id=None):
         "transcription": translation.transcription or name.transliteration,
         "meaning": translation.meaning,
         "description": translation.description,
+        "provenance": content_provenance(name, "name"),
         "status": progress.status if progress else "new",
         "is_next": name.id == next_id,
         "audio_tracks": audio_tracks_for("name", name, profile.language),
@@ -66,6 +68,7 @@ def lesson_dto(lesson, profile, *, progress=None, detail=False):
         "status": progress.status if progress else "new",
     }
     if detail:
+        result["provenance"] = content_provenance(lesson, "lesson")
         result["explanation"] = translation.explanation
         result["items"] = []
         for item in lesson.items.all():
@@ -136,6 +139,7 @@ def library_dto(item, kind, profile, favorite_ids=None, studied_ids=None):
         "transcription": text.transcription,
         "translation": text.translation,
         "reference": reference,
+        "provenance": content_provenance(item, kind, text),
         "is_favorite": saved,
         "is_studied": item.id in (studied_ids or set()),
         "audio_tracks": audio_tracks_for(kind, item, profile.language),

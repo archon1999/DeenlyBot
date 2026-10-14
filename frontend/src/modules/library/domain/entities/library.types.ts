@@ -1,8 +1,10 @@
 import type { AudioTrack } from 'src/shared/domain/audio';
+import type { ContentProvenance } from 'src/shared/domain/content-provenance';
 
 export type LibraryKind = 'ayah' | 'surah' | 'dua';
 export type LibraryFilter = LibraryKind | 'favorites';
 export type LibraryItem = {
+  provenance?: ContentProvenance;
   id: number;
   kind: LibraryKind;
   title: string;
@@ -23,6 +25,7 @@ export type LibraryWord = {
   grammarNote: string;
 };
 export type LibraryAnalysis = {
+  provenance?: ContentProvenance;
   summary: string;
   context: string;
   explanation: string;

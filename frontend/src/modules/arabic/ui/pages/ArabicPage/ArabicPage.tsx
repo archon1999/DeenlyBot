@@ -9,6 +9,7 @@ import { useLocale } from 'src/shared/i18n';
 import { QueryState } from 'src/shared/ui/query-state';
 import { LearningTabs } from 'src/shared/ui/learning-tabs';
 import { DashboardContent } from 'src/app/layouts/dashboard';
+import { ReviewLink, ReviewSection } from 'src/shared/ui/review-navigation';
 
 import { useArabicLabels } from '../../labels';
 import { useArabic } from '../../../application';
@@ -46,12 +47,21 @@ export function ArabicPage() {
           {data && (
             <>
               <ArabicProgress stats={data.stats} labels={labels} />
-              <LearningTabs
-                value={category}
-                onChange={(value) => setCategory(value as ArabicCategory | 'all')}
-                items={[{ key: 'all', title: labels.all }, ...data.categories]}
-                label={labels.lessons}
-              />
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                spacing={1.5}
+                alignItems={{ xs: 'stretch', md: 'center' }}
+              >
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <LearningTabs
+                    value={category}
+                    onChange={(value) => setCategory(value as ArabicCategory | 'all')}
+                    items={[{ key: 'all', title: labels.all }, ...data.categories]}
+                    label={labels.lessons}
+                  />
+                </Box>
+                <ReviewLink targetId="arabic-review" />
+              </Stack>
               {data.categories.find((value) => value.key === category)?.description && (
                 <Typography variant="body2" color="text.secondary">
                   {data.categories.find((value) => value.key === category)?.description}
@@ -66,12 +76,14 @@ export function ArabicPage() {
                 categoryTitle={data.categories.find((value) => value.key === category)?.title}
                 categories={data.categories}
               />
-              <ArabicQuiz
-                key={language}
-                labels={labels}
-                introduced={data.stats.introducedItems}
-                audioCount={data.stats.audioCount}
-              />
+              <ReviewSection id="arabic-review">
+                <ArabicQuiz
+                  key={language}
+                  labels={labels}
+                  introduced={data.stats.introducedItems}
+                  audioCount={data.stats.audioCount}
+                />
+              </ReviewSection>
             </>
           )}
         </QueryState>

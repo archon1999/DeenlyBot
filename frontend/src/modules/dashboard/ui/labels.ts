@@ -3,6 +3,12 @@ import { useLocale } from 'src/shared/i18n';
 const labels = {
   uz: {
     title: 'Bugun',
+    todayStep: 'Bugungi kichik qadam',
+    explore: 'Ilm yo‘lida davom eting',
+    library: 'Kutubxonadan o‘qing',
+    libraryHint: 'Oyat, sura yoki duo — matn, audio va ma’nolari bir joyda.',
+    libraryAction: 'Kutubxonani ochish',
+    reviewEmpty: 'Hozir takrorlash navbati yo‘q. Yangi bilim uchun qulay vaqt.',
     greeting: 'Assalomu alaykum',
     subtitle: 'Ilm va ibodat uchun bugungi kichik qadamlar.',
     continue: 'Davom ettirish',
@@ -40,6 +46,12 @@ const labels = {
   },
   ru: {
     title: 'Сегодня',
+    todayStep: 'Небольшой шаг на сегодня',
+    explore: 'Продолжайте путь к знаниям',
+    library: 'Читайте в библиотеке',
+    libraryHint: 'Аят, сура или дуа — текст, аудио и значения вместе.',
+    libraryAction: 'Открыть библиотеку',
+    reviewEmpty: 'Сейчас нет повторений. Можно изучить что-то новое.',
     greeting: 'Ассаляму алейкум',
     subtitle: 'Небольшие шаги в знаниях и поклонении на сегодня.',
     continue: 'Продолжить',
@@ -77,6 +89,12 @@ const labels = {
   },
   en: {
     title: 'Today',
+    todayStep: 'A small step today',
+    explore: 'Continue your learning journey',
+    library: 'Read in the library',
+    libraryHint: 'An ayah, surah or dua — text, audio and meanings together.',
+    libraryAction: 'Open library',
+    reviewEmpty: 'No reviews are due. A good moment to learn something new.',
     greeting: 'Assalamu alaikum',
     subtitle: 'Small steps in knowledge and worship for today.',
     continue: 'Continue learning',

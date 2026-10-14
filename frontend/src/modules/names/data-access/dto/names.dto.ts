@@ -1,6 +1,8 @@
 import type { AudioTrackDto } from 'src/shared/audio/audio.dto';
+import type { ContentProvenanceDto } from 'src/shared/api/content-provenance';
 
 export type NameDto = {
+  provenance?: ContentProvenanceDto;
   id: number;
   order: number;
   arabic: string;

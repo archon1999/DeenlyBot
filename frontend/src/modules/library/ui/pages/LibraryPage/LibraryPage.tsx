@@ -20,6 +20,7 @@ import { Iconify } from 'src/shared/ui/iconify';
 import { QueryState } from 'src/shared/ui/query-state';
 import { LearningTabs } from 'src/shared/ui/learning-tabs';
 import { DashboardContent } from 'src/app/layouts/dashboard';
+import { ReviewLink, ReviewSection } from 'src/shared/ui/review-navigation';
 
 import { useLibraryLabels } from '../../labels';
 import { LibraryGrid } from './components/library-grid';
@@ -80,18 +81,27 @@ export function LibraryPage() {
         >
           {practice.data && <LibraryProgress stats={practice.data} labels={labels} />}
         </QueryState>
-        <LearningTabs
-          value={kind}
-          label={labels.title}
-          items={(['ayah', 'surah', 'dua', 'favorites'] as const).map((key) => ({
-            key,
-            title: labels[key],
-          }))}
-          onChange={(value) => {
-            setKind(value as LibraryFilter);
-            setPage(1);
-          }}
-        />
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1.5}
+          alignItems={{ xs: 'stretch', sm: 'center' }}
+        >
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <LearningTabs
+              value={kind}
+              label={labels.title}
+              items={(['ayah', 'surah', 'dua', 'favorites'] as const).map((key) => ({
+                key,
+                title: labels[key],
+              }))}
+              onChange={(value) => {
+                setKind(value as LibraryFilter);
+                setPage(1);
+              }}
+            />
+          </Box>
+          {practice.data && <ReviewLink targetId="library-review" />}
+        </Stack>
         <Card sx={{ p: 2.5 }}>
           <Stack
             component="form"
@@ -173,13 +183,15 @@ export function LibraryPage() {
           )}
         </QueryState>
         {practice.data && (
-          <LibraryQuiz
-            key={`${language}:${kind}`}
-            kind={kind}
-            labels={labels}
-            introduced={practice.data.studiedCount}
-            audioCount={practice.data.audioCount}
-          />
+          <ReviewSection id="library-review">
+            <LibraryQuiz
+              key={`${language}:${kind}`}
+              kind={kind}
+              labels={labels}
+              introduced={practice.data.studiedCount}
+              audioCount={practice.data.audioCount}
+            />
+          </ReviewSection>
         )}
         <LibraryReader
           key={selected ? `${language}:${selected.kind}:${selected.id}` : 'closed'}

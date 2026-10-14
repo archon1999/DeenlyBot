@@ -21,41 +21,48 @@ export function TodayActions({
       <Card>
         <CardHeader title={labels.review} subheader={labels.reviewHint} />
         <Stack spacing={2} divider={<Divider sx={{ borderStyle: 'dashed' }} />} sx={{ p: 3 }}>
+          {!data.reviewsDue && !data.arabicReviewsDue && (
+            <Typography variant="body2" color="text.secondary">
+              {labels.reviewEmpty}
+            </Typography>
+          )}
           {[
             { label: labels.nameReviews, count: data.reviewsDue, href: '/names' },
             { label: labels.arabicReviews, count: data.arabicReviewsDue, href: '/arabic' },
-          ].map((row) => (
-            <Stack
-              key={row.href}
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              spacing={1}
-            >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box
-                  sx={{
-                    display: 'flex',
-                    p: 1,
-                    borderRadius: 1.5,
-                    color: 'primary.main',
-                    bgcolor: 'background.neutral',
-                  }}
-                >
-                  <Iconify icon="solar:restart-bold" width={20} />
-                </Box>
-                <Box>
-                  <Typography variant="subtitle2">{row.label}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {row.count} · {labels.review}
-                  </Typography>
-                </Box>
+          ]
+            .filter((row) => row.count > 0)
+            .map((row) => (
+              <Stack
+                key={row.href}
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                spacing={1}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      p: 1,
+                      borderRadius: 1.5,
+                      color: 'primary.main',
+                      bgcolor: 'background.neutral',
+                    }}
+                  >
+                    <Iconify icon="solar:restart-linear" width={20} />
+                  </Box>
+                  <Box>
+                    <Typography variant="subtitle2">{row.label}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {row.count} · {labels.review}
+                    </Typography>
+                  </Box>
+                </Stack>
+                <Button component={Link} to={row.href} size="small">
+                  {labels.review}
+                </Button>
               </Stack>
-              <Button component={Link} to={row.href} size="small">
-                {labels.review}
-              </Button>
-            </Stack>
-          ))}
+            ))}
         </Stack>
       </Card>
       <Card sx={{ p: 3, bgcolor: 'background.paper' }}>
@@ -86,7 +93,7 @@ export function TodayActions({
             </Button>
           </Stack>
           <Iconify
-            icon="solar:calendar-date-bold"
+            icon="solar:calendar-mark-linear"
             width={48}
             aria-hidden
             sx={{ color: 'primary.main', opacity: 0.65 }}

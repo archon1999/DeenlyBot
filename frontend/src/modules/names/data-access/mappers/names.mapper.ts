@@ -2,8 +2,10 @@ import type { NameDto, NamesDto, NameQuizDto, NameResultDto } from '../dto';
 import type { NameQuiz, AllahName, NamesOverview, NameQuizResult } from '../../domain';
 
 import { mapAudioTracks } from 'src/shared/audio/audio.dto';
+import { mapContentProvenance } from 'src/shared/api/content-provenance';
 
 export const mapName = (d: NameDto): AllahName => ({
+  provenance: mapContentProvenance(d.provenance),
   id: d.id,
   order: d.order,
   arabic: d.arabic,

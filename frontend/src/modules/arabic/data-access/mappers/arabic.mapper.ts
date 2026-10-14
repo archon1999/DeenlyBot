@@ -14,6 +14,7 @@ import type {
 } from '../../domain';
 
 import { mapAudioTracks } from 'src/shared/audio/audio.dto';
+import { mapContentProvenance } from 'src/shared/api/content-provenance';
 
 export const mapLesson = (d: LessonDto): ArabicLesson => ({
   id: d.id,
@@ -28,6 +29,7 @@ export const mapLesson = (d: LessonDto): ArabicLesson => ({
 });
 export const mapLessonDetail = (d: LessonDetailDto): ArabicLessonDetail => ({
   ...mapLesson(d),
+  provenance: mapContentProvenance(d.provenance),
   explanation: d.explanation,
   items: d.items.map((item) => ({
     id: item.id,

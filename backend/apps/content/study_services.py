@@ -5,6 +5,7 @@ import re
 from django.db.models import F
 
 from .models import QuranPassage, QuranPassageAnalysis, QuranVerse
+from .provenance import content_provenance
 
 
 def resolve_library_reference(reference):
@@ -50,6 +51,7 @@ def passage_analysis(passage, language):
             passage=passage, is_verified=True, source__is_verified=True
         )
         .prefetch_related("translations")
+        .select_related("source")
         .first()
     )
     if analysis is None:
@@ -93,6 +95,7 @@ def passage_analysis(passage, language):
     if len(result) != passage.ayah_end - passage.ayah_start + 1:
         return None
     return {
+        "provenance": content_provenance(analysis, "analysis"),
         "summary": text.summary,
         "context": text.context,
         "explanation": text.explanation,

@@ -16,8 +16,10 @@ import type {
 } from '../../domain';
 
 import { mapAudioTracks } from 'src/shared/audio/audio.dto';
+import { mapContentProvenance } from 'src/shared/api/content-provenance';
 
 export const mapLibraryItem = (d: LibraryItemDto): LibraryItem => ({
+  provenance: mapContentProvenance(d.provenance),
   id: d.id,
   kind: d.kind,
   title: d.title,
@@ -33,6 +35,7 @@ export const mapLibraryDetail = (d: LibraryDetailDto): LibraryDetail => ({
   ...mapLibraryItem(d),
   analysis: d.analysis
     ? {
+        provenance: mapContentProvenance(d.analysis.provenance),
         summary: d.analysis.summary,
         context: d.analysis.context,
         explanation: d.analysis.explanation,

@@ -15,19 +15,19 @@ export function NameMetrics({ data, labels }: { data: NamesOverview; labels: Nam
         label={labels.introduced}
         value={`${data.introducedCount} / ${data.total}`}
         progress={data.total ? (data.introducedCount / data.total) * 100 : 0}
-        icon={<Iconify icon="solar:file-text-bold" width={28} />}
+        icon={<Iconify icon="solar:notebook-bookmark-linear" width={28} />}
         color="primary"
       />
       <MetricCard
         label={labels.learned}
         value={data.learnedCount}
-        icon={<Iconify icon="solar:verified-check-bold" width={28} />}
+        icon={<Iconify icon="solar:check-circle-linear" width={28} />}
         color="success"
       />
       <MetricCard
         label={labels.due}
         value={data.dueCount}
-        icon={<Iconify icon="solar:restart-bold" width={28} />}
+        icon={<Iconify icon="solar:restart-linear" width={28} />}
         color="warning"
       />
     </Box>

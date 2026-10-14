@@ -44,7 +44,7 @@ export function ProgressCards({
         <MetricCard
           label={labels.names}
           value={`${stats.namesIntroduced} / ${stats.namesTotal}`}
-          icon={<Iconify icon="solar:notebook-bold-duotone" width={28} />}
+          icon={<Iconify icon="solar:notebook-bookmark-linear" width={28} />}
           progress={nameProgress}
           helper={`${Math.round(nameProgress)}% ${labels.coverage}`}
           details={[
@@ -58,7 +58,7 @@ export function ProgressCards({
         <MetricCard
           label={labels.arabic}
           value={`${stats.arabicLessonsCompleted} / ${stats.arabicLessonsTotal}`}
-          icon={<Iconify icon="solar:notes-bold-duotone" width={28} />}
+          icon={<Iconify icon="solar:text-square-linear" width={28} />}
           color="info"
           progress={lessonProgress}
           helper={`${Math.round(lessonProgress)}% ${labels.coverage}`}
@@ -73,7 +73,7 @@ export function ProgressCards({
         <MetricCard
           label={labels.qada}
           value={stats.qadaCompleted}
-          icon={<Iconify icon="solar:check-circle-bold" width={28} />}
+          icon={<Iconify icon="solar:check-circle-linear" width={28} />}
           color="success"
           helper={labels.allTime}
           details={[
@@ -87,7 +87,7 @@ export function ProgressCards({
         <MetricCard
           label={labels.due}
           value={stats.namesDue + stats.arabicDue}
-          icon={<Iconify icon="solar:restart-bold" width={28} />}
+          icon={<Iconify icon="solar:restart-linear" width={28} />}
           color="warning"
           helper={labels.readyForReview}
           details={[
@@ -184,7 +184,7 @@ export function ProgressCards({
                   / {stats.namesIntroduced}
                 </Typography>
               </Typography>
-              <Iconify icon="solar:verified-check-bold" width={28} sx={{ color: 'primary.main' }} />
+              <Iconify icon="solar:check-circle-linear" width={28} sx={{ color: 'primary.main' }} />
             </Stack>
             <LinearProgress
               variant="determinate"

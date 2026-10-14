@@ -9,6 +9,7 @@ import { useLocale } from 'src/shared/i18n';
 import { Iconify } from 'src/shared/ui/iconify';
 import { QueryState } from 'src/shared/ui/query-state';
 import { DashboardContent } from 'src/app/layouts/dashboard';
+import { ReviewLink, ReviewSection } from 'src/shared/ui/review-navigation';
 
 import { useNamesLabels } from '../../labels';
 import { useNames } from '../../../application';
@@ -58,7 +59,6 @@ export function NamesPage() {
               ) : (
                 <Alert severity="success">{labels.allDone}</Alert>
               )}
-              <NameQuiz key={language} labels={labels} introduced={data.introducedCount} />
               <Stack
                 direction={{ xs: 'column', sm: 'row' }}
                 spacing={2}
@@ -71,28 +71,38 @@ export function NamesPage() {
                     ({data.total})
                   </Typography>
                 </Typography>
-                <TextField
-                  size="small"
-                  label={labels.search}
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  slotProps={{
-                    input: {
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Iconify icon="eva:search-fill" width={18} />
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                  sx={{ width: { xs: '100%', sm: 320 } }}
-                />
+                <Stack
+                  direction={{ xs: 'column', sm: 'row' }}
+                  spacing={1.5}
+                  alignItems={{ sm: 'center' }}
+                >
+                  <TextField
+                    size="small"
+                    label={labels.search}
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    slotProps={{
+                      input: {
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Iconify icon="eva:search-fill" width={18} />
+                          </InputAdornment>
+                        ),
+                      },
+                    }}
+                    sx={{ width: { xs: '100%', sm: 320 } }}
+                  />
+                  <ReviewLink targetId="names-review" />
+                </Stack>
               </Stack>
               {names.length ? (
                 <NamesGrid names={names} onSelect={setSelected} labels={labels} />
               ) : (
                 <Alert severity="info">{labels.empty}</Alert>
               )}
+              <ReviewSection id="names-review">
+                <NameQuiz key={language} labels={labels} introduced={data.introducedCount} />
+              </ReviewSection>
             </>
           )}
         </QueryState>
