@@ -102,6 +102,29 @@ def healthy():
     raise RuntimeError("New backend did not become healthy")
 
 
+def frontend_healthy():
+    # An exposed port can briefly reset connections while Nginx starts.
+    # Curl's default retry policy does not retry connection-reset errors.
+    run(
+        [
+            "curl",
+            "--fail",
+            "--retry",
+            "5",
+            "--retry-all-errors",
+            "--retry-delay",
+            "2",
+            "--retry-max-time",
+            "60",
+            "--max-time",
+            "10",
+            "-H",
+            "Host: deenly.uz",
+            "http://127.0.0.1:8080/health/",
+        ]
+    )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--release", type=Path, required=True)
@@ -278,21 +301,7 @@ def main():
             # After public writers resume, never automatically restore an older DB.
             exposed = True
             compose(release, "up", "-d", "--no-deps", "frontend", "bot", "worker")
-            run(
-                [
-                    "curl",
-                    "--fail",
-                    "--retry",
-                    "5",
-                    "--retry-delay",
-                    "2",
-                    "--max-time",
-                    "10",
-                    "-H",
-                    "Host: deenly.uz",
-                    "http://127.0.0.1:8080/health/",
-                ]
-            )
+            frontend_healthy()
             # The exact record audit was completed before public writers resumed.
             # Real bot/web activity after that point is allowed to change records.
             print("Deployment health verified; pre-start record audit passed. Backup:", backup)
