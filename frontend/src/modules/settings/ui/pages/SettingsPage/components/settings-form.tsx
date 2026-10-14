@@ -1,6 +1,8 @@
 import type { SettingsLabels } from '../../../labels';
 import type { UserSettings } from '../../../../domain';
 
+import { useState } from 'react';
+
 import {
   Box,
   Card,
@@ -18,13 +20,10 @@ import {
 } from '@mui/material';
 
 import { Iconify } from 'src/shared/ui/iconify';
+import { LocalizedTimePicker } from 'src/shared/ui/time-picker';
 
 import { useSaveSettings, useSettingsDraft } from '../../../../application';
 
-const slots = Array.from(
-  { length: 48 },
-  (_, i) => `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`
-);
 export function SettingsForm({
   initial,
   labels,
@@ -34,6 +33,10 @@ export function SettingsForm({
 }) {
   const { values, setValues } = useSettingsDraft(initial);
   const mutation = useSaveSettings();
+  const [invalidTimes, setInvalidTimes] = useState<Record<string, boolean>>({});
+  const timeValidity = (key: string, invalid: boolean) =>
+    setInvalidTimes((current) => current[key] === invalid ? current : { ...current, [key]: invalid });
+  const hasInvalidTime = Object.values(invalidTimes).some(Boolean);
   const invalidTimezone = mutation.error?.message === 'timezone: Unknown IANA timezone';
   const set = <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
     mutation.reset();
@@ -45,6 +48,7 @@ export function SettingsForm({
       spacing={3}
       onSubmit={(event) => {
         event.preventDefault();
+        if (hasInvalidTime) return;
         mutation.mutate(values, {
           onSuccess: (data) => {
             setValues(data);
@@ -113,30 +117,20 @@ export function SettingsForm({
                   slotProps={{ htmlInput: { min: 0, max: 10 } }}
                   required
                 />
-                <TextField
-                  select
+                <LocalizedTimePicker
                   label={labels.start}
-                  value={values.randomWindowStart.slice(0, 5)}
-                  onChange={(event) => set('randomWindowStart', event.target.value)}
-                >
-                  {slots.map((time) => (
-                    <MenuItem key={time} value={time}>
-                      {time}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  select
+                  value={values.randomWindowStart}
+                  onChange={(value) => set('randomWindowStart', value)}
+                  onValidityChange={(invalid) => timeValidity('start', invalid)}
+                  minutesStep={30}
+                />
+                <LocalizedTimePicker
                   label={labels.end}
-                  value={values.randomWindowEnd.slice(0, 5)}
-                  onChange={(event) => set('randomWindowEnd', event.target.value)}
-                >
-                  {slots.map((time) => (
-                    <MenuItem key={time} value={time}>
-                      {time}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  value={values.randomWindowEnd}
+                  onChange={(value) => set('randomWindowEnd', value)}
+                  onValidityChange={(invalid) => timeValidity('end', invalid)}
+                  minutesStep={30}
+                />
               </Box>
               <Typography variant="body2" color="text.secondary">
                 {labels.windowHint}
@@ -185,13 +179,11 @@ export function SettingsForm({
                     </MenuItem>
                   ))}
                 </TextField>
-                <TextField
-                  type="time"
+                <LocalizedTimePicker
                   label={labels.time}
-                  value={values.weeklyReportTime.slice(0, 5)}
-                  onChange={(event) => set('weeklyReportTime', event.target.value)}
-                  slotProps={{ inputLabel: { shrink: true }, htmlInput: { step: 60 } }}
-                  required
+                  value={values.weeklyReportTime}
+                  onChange={(value) => set('weeklyReportTime', value)}
+                  onValidityChange={(invalid) => timeValidity('weekly', invalid)}
                 />
               </Box>
             </Stack>
@@ -209,6 +201,7 @@ export function SettingsForm({
         type="submit"
         size="large"
         loading={mutation.isPending}
+        disabled={hasInvalidTime}
         startIcon={<Iconify icon="eva:checkmark-fill" />}
         sx={{ alignSelf: 'flex-end' }}
       >

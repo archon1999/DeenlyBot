@@ -2,7 +2,9 @@ import type { Breakpoint } from '@mui/material/styles';
 import type { NavSectionProps } from 'src/shared/ui/nav-section';
 import type { MainSectionProps, HeaderSectionProps, LayoutSectionProps } from '../core';
 
-import { lazy, Suspense, useState, useEffect } from 'react';
+import { lazy, useRef, Suspense, useState, useEffect } from 'react';
+
+import GlobalStyles from '@mui/material/GlobalStyles';
 
 import { usePathname } from 'src/app/routes/hooks';
 import { MotionLazy } from 'src/shared/ui/animate/motion-lazy';
@@ -26,14 +28,19 @@ export type DashboardLayoutProps = Pick<LayoutSectionProps, 'sx' | 'children' | 
 
 export function DashboardLayout({ sx, cssVars, children, slotProps }: DashboardLayoutProps) {
   const pathname = usePathname();
+  const contentRef = useRef<HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const defaultNavData = useNavData();
   const navData = slotProps?.nav?.data ?? defaultNavData;
   useEffect(() => {
     setMobileOpen(false);
+    contentRef.current?.scrollTo({ top: 0, left: 0 });
   }, [pathname]);
   return (
     <MotionLazy>
+      <GlobalStyles
+        styles={{ 'body, #root': { height: '100dvh', minHeight: 0, overflow: 'hidden' } }}
+      />
       <LayoutSection
         headerSection={
           <LearningHeader
@@ -48,9 +55,28 @@ export function DashboardLayout({ sx, cssVars, children, slotProps }: DashboardL
           '--layout-dashboard-content-px': '24px',
           ...cssVars,
         }}
-        sx={[{ minHeight: '100vh' }, ...(Array.isArray(sx) ? sx : [sx])]}
+        sx={[
+          { height: '100dvh', minHeight: 0, overflow: 'hidden' },
+          ...(Array.isArray(sx) ? sx : [sx]),
+        ]}
       >
-        <MainSection id="main-content" {...slotProps?.main}>
+        <MainSection
+          {...slotProps?.main}
+          ref={contentRef}
+          id="main-content"
+          tabIndex={0}
+          sx={[
+            {
+              minHeight: 0,
+              minWidth: 0,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              overscrollBehaviorY: 'contain',
+              scrollbarGutter: 'stable',
+            },
+            ...(Array.isArray(slotProps?.main?.sx) ? slotProps.main.sx : [slotProps?.main?.sx]),
+          ]}
+        >
           {children}
         </MainSection>
         <Suspense fallback={null}>

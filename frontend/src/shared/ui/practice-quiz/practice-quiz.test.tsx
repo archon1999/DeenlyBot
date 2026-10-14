@@ -88,4 +88,5 @@ it('offers listening mode without inventing studied audio eligibility', () => {
   expect(html).toContain('Text practice');
   expect(html).toContain('Listening practice');
   expect(html).not.toContain('src=');
+  expect(html).toContain('padding:6px');
 });

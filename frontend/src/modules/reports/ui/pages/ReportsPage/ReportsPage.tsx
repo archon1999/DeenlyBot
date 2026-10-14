@@ -4,9 +4,11 @@ import { QueryState } from 'src/shared/ui/query-state';
 import { DashboardContent } from 'src/app/layouts/dashboard';
 
 import { useReportsLabels } from '../../labels';
+import { newestReports } from '../../../domain';
 import { useReports } from '../../../application';
 import { ProgressCards } from './components/progress-cards';
 import { WeeklyReports } from './components/weekly-reports';
+import { ReportInsights } from './components/report-insights';
 
 export function ReportsPage() {
   const query = useReports();
@@ -23,7 +25,16 @@ export function ReportsPage() {
         <QueryState isPending={query.isPending} error={query.error} onRetry={() => query.refetch()}>
           {query.data && (
             <>
-              <ProgressCards stats={query.data.stats} labels={labels} />
+              <ProgressCards
+                stats={query.data.stats}
+                labels={labels}
+                latestReport={newestReports(query.data.weeklyReports)[0]}
+              />
+              <ReportInsights
+                reports={query.data.weeklyReports}
+                stats={query.data.stats}
+                labels={labels}
+              />
               <Card>
                 <CardHeader title={labels.weekly} subheader={labels.weeklyHint} />
                 <Box sx={{ p: { xs: 2.5, md: 3 } }}>

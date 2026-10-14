@@ -18,4 +18,6 @@ it.each([
   expect(html).toContain('flex-direction:column');
   expect(html).toContain('flex-direction:row');
   expect(html).toContain('max-width:100%');
+  expect(html).toContain('order:-1');
+  expect(html).toContain('order:0');
 });

@@ -2,7 +2,7 @@ import type { CardProps } from '@mui/material/Card';
 
 import { varAlpha } from 'minimal-shared/utils';
 
-import { Box, Card, Typography, LinearProgress } from '@mui/material';
+import { Box, Card, Stack, Divider, Typography, LinearProgress } from '@mui/material';
 
 type MetricColor = 'primary' | 'secondary' | 'info' | 'success' | 'warning';
 type Props = CardProps & {
@@ -12,6 +12,7 @@ type Props = CardProps & {
   color?: MetricColor;
   helper?: string;
   progress?: number;
+  details?: { label: string; value: string | number }[];
 };
 
 /** Adapted from the supplied full Minimal CourseWidgetSummary, without demo data. */
@@ -22,6 +23,7 @@ export function MetricCard({
   color = 'primary',
   helper,
   progress,
+  details,
   sx,
   ...other
 }: Props) {
@@ -80,6 +82,29 @@ export function MetricCard({
           value={Math.max(0, Math.min(100, progress))}
           sx={{ mt: 2.5, height: 5 }}
         />
+      )}
+      {!!details?.length && (
+        <Stack spacing={1} sx={{ mt: 2 }}>
+          <Divider sx={{ mb: 0.5 }} />
+          {details.map((detail) => (
+            <Box
+              key={detail.label}
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                gap: 1,
+              }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                {detail.label}
+              </Typography>
+              <Typography variant="subtitle2" sx={{ flexShrink: 0 }}>
+                {detail.value}
+              </Typography>
+            </Box>
+          ))}
+        </Stack>
       )}
     </Card>
   );

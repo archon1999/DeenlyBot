@@ -4,6 +4,7 @@ import type { LibraryItem } from '../../../../domain';
 import { Box, Card, Chip, Stack, Button, Tooltip, IconButton, Typography } from '@mui/material';
 
 import { Iconify } from 'src/shared/ui/iconify';
+import { learningCover } from 'src/shared/ui/learning-cover';
 
 /** Adapted from full Minimal src/sections/blog/post-item-horizontal.tsx. */
 export function LibraryGrid({
@@ -107,11 +108,13 @@ export function LibraryGrid({
                 position: 'relative',
                 overflow: 'hidden',
                 borderRadius: 2,
-                bgcolor: 'primary.lighter',
+                ...learningCover(
+                  theme,
+                  item.kind === 'dua' ? 'blue' : item.kind === 'surah' ? 'mint' : 'lavender'
+                ),
                 p: 2,
                 display: 'flex',
                 alignItems: 'center',
-                ...theme.applyStyles('dark', { bgcolor: 'primary.darker' }),
               })}
             >
               <Box
@@ -136,7 +139,7 @@ export function LibraryGrid({
                   fontSize: 26,
                   lineHeight: 1.95,
                   textAlign: 'center',
-                  color: 'primary.main',
+                  color: 'inherit',
                   overflow: 'hidden',
                   display: '-webkit-box',
                   WebkitLineClamp: 4,

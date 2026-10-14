@@ -91,6 +91,8 @@ export function LearningHeader({
         ),
       }}
       sx={(theme) => ({
+        flexShrink: 0,
+        position: 'relative',
         borderBottom: `1px solid ${theme.vars.palette.divider}`,
         bgcolor: 'background.paper',
         '&::before': { display: 'none' },

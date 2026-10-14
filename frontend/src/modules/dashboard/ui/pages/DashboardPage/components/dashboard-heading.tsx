@@ -14,6 +14,7 @@ export function DashboardHeading({
       alignItems={{ xs: 'stretch', sm: 'center' }}
       justifyContent="space-between"
       spacing={{ xs: 1.5, sm: 3 }}
+      useFlexGap
     >
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="h3">{labels.title}</Typography>
@@ -32,7 +33,8 @@ export function DashboardHeading({
           lineHeight: 2,
           letterSpacing: 0,
           color: 'primary.dark',
-          textAlign: 'right',
+          textAlign: { xs: 'center', sm: 'right' },
+          order: { xs: -1, sm: 0 },
           flexShrink: 0,
           maxWidth: '100%',
           ...theme.applyStyles('dark', { color: 'primary.light' }),

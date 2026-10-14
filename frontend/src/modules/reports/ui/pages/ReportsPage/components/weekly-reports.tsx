@@ -3,29 +3,31 @@ import type { WeeklyReport } from '../../../../domain';
 
 import {
   Box,
+  Chip,
   Stack,
   Accordion,
   Typography,
+  LinearProgress,
   AccordionDetails,
   AccordionSummary,
 } from '@mui/material';
 
+import { useLocale } from 'src/shared/i18n';
 import { Iconify } from 'src/shared/ui/iconify';
+import { formatDateParts } from 'src/shared/lib/format-date';
+import { learningCover } from 'src/shared/ui/learning-cover';
 
-const keys = [
-  'introduced',
-  'learned_total',
-  'reviews',
-  'correct',
-  'accuracy',
-  'arabic_lessons_completed',
-  'arabic_items_total',
-  'arabic_reviews',
-  'arabic_accuracy',
-  'prayer_completed',
-  'fast_completed',
-  'favorites_added',
-] as const;
+import { reportCount, newestReports } from '../../../../domain';
+
+export function reportPeriod(report: WeeklyReport, language: 'uz' | 'ru' | 'en') {
+  const start = formatDateParts(report.periodStart, language);
+  const end = formatDateParts(report.periodEnd, language);
+  if (start.year === '—' || end.year === '—') return '—';
+  if (start.year === end.year && start.month === end.month)
+    return `${start.day}–${end.day} ${end.month} ${end.year}`;
+  return `${start.day} ${start.month}${start.year === end.year ? '' : ` ${start.year}`} — ${end.day} ${end.month} ${end.year}`;
+}
+
 export function WeeklyReports({
   reports,
   labels,
@@ -33,71 +35,191 @@ export function WeeklyReports({
   reports: WeeklyReport[];
   labels: ReportsLabels;
 }) {
+  const { language } = useLocale();
   return (
     <Stack spacing={2}>
-      {reports.map((report, index) => (
+      {newestReports(reports).map((report, index) => (
         <Accordion
           key={report.id}
           defaultExpanded={index === 0}
           disableGutters
-          sx={(theme) => ({
-            boxShadow: theme.vars.customShadows.card,
-            border: 0,
-            borderRadius: 2,
+          sx={{
+            boxShadow: 'none',
+            bgcolor: 'transparent',
             '&:before': { display: 'none' },
             '&.Mui-expanded': { m: 0 },
-          })}
+          }}
         >
           <AccordionSummary
-            expandIcon={<Iconify icon="eva:arrow-ios-downward-fill" />}
-            sx={{ px: 2.5, py: 1 }}
+            expandIcon={<Iconify icon="solar:alt-arrow-down-linear" />}
+            sx={{ px: 0, py: 1 }}
           >
-            <Stack direction="row" alignItems="center" spacing={2}>
+            <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
               <Box
-                sx={{
+                sx={(theme) => ({
+                  ...learningCover(theme, 'mint'),
                   p: 1.25,
                   borderRadius: 1.5,
-                  bgcolor: 'primary.lighter',
-                  color: 'primary.main',
                   display: 'flex',
-                }}
+                  flexShrink: 0,
+                })}
               >
-                <Iconify icon="solar:calendar-date-bold" width={24} />
+                <Iconify icon="solar:calendar-mark-linear" width={24} />
               </Box>
-              <Typography variant="subtitle2">
-                {report.periodStart} — {report.periodEnd}
-              </Typography>
+              <Box>
+                <Typography variant="subtitle2">{reportPeriod(report, language)}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {labels.week}
+                </Typography>
+              </Box>
+              {index === 0 && (
+                <Chip
+                  label={labels.latest}
+                  size="small"
+                  variant="soft"
+                  sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
+                />
+              )}
             </Stack>
           </AccordionSummary>
-          <AccordionDetails sx={{ p: 2.5, pt: 0 }}>
+          <AccordionDetails sx={{ px: 0, pb: 2, pt: 1 }}>
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(3,1fr)' },
-                gap: 1.5,
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(3,1fr)' },
+                gap: 2,
               }}
             >
-              {keys
-                .filter((key) => report.data[key] !== undefined)
-                .map((key) => (
-                  <Stack
-                    key={key}
-                    spacing={0.5}
-                    sx={{ p: 2, borderRadius: 1.5, bgcolor: 'background.neutral' }}
-                  >
-                    <Typography variant="caption" color="text.secondary">
-                      {labels[key]}
-                    </Typography>
-                    <Typography variant="h6">
-                      {report.data[key]}
-                      {key.includes('accuracy') ? '%' : ''}
-                    </Typography>
-                  </Stack>
-                ))}
+              <ReportGroup
+                report={report}
+                labels={labels}
+                title={labels.namesGroup}
+                tone="mint"
+                icon="solar:notebook-bookmark-linear"
+                primary="reviews"
+                rows={['introduced', 'correct']}
+                accuracy="accuracy"
+                snapshot="learned_total"
+              />
+              <ReportGroup
+                report={report}
+                labels={labels}
+                title={labels.arabicGroup}
+                tone="blue"
+                icon="solar:text-square-linear"
+                primary="arabic_lessons_completed"
+                rows={['arabic_reviews']}
+                accuracy="arabic_accuracy"
+                snapshot="arabic_items_total"
+              />
+              <ReportGroup
+                report={report}
+                labels={labels}
+                title={labels.worshipGroup}
+                tone="peach"
+                icon="solar:checklist-minimalistic-linear"
+                primary="prayer_completed"
+                rows={['fast_completed', 'favorites_added']}
+              />
             </Box>
           </AccordionDetails>
         </Accordion>
       ))}
+    </Stack>
+  );
+}
+
+function ReportGroup({
+  report,
+  labels,
+  title,
+  tone,
+  icon,
+  primary,
+  rows,
+  accuracy,
+  snapshot,
+}: {
+  report: WeeklyReport;
+  labels: ReportsLabels;
+  title: string;
+  tone: Parameters<typeof learningCover>[1];
+  icon: React.ComponentProps<typeof Iconify>['icon'];
+  primary: keyof ReportsLabels;
+  rows: (keyof ReportsLabels)[];
+  accuracy?: keyof ReportsLabels;
+  snapshot?: keyof ReportsLabels;
+}) {
+  const value = (key: string) => reportCount(report, key) ?? '—';
+  const attempts = reportCount(report, accuracy === 'accuracy' ? 'reviews' : 'arabic_reviews');
+  const rate = accuracy && attempts ? reportCount(report, accuracy) : undefined;
+  return (
+    <Stack
+      spacing={1.5}
+      sx={(theme) => ({ ...learningCover(theme, tone), p: 2.5, borderRadius: 2, minWidth: 0 })}
+    >
+      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+        <Typography variant="subtitle2">{title}</Typography>
+        <Iconify icon={icon} width={22} />
+      </Stack>
+      <Box>
+        <Typography variant="h3" sx={{ color: 'text.primary' }}>
+          {value(primary)}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          {labels[primary]}
+        </Typography>
+      </Box>
+      {rows.map((key) => (
+        <Stack
+          key={key}
+          direction="row"
+          justifyContent="space-between"
+          alignItems="baseline"
+          spacing={1}
+        >
+          <Typography variant="caption" color="text.secondary">
+            {labels[key]}
+          </Typography>
+          <Typography variant="subtitle2" color="text.primary">
+            {value(key)}
+          </Typography>
+        </Stack>
+      ))}
+      {accuracy && (
+        <Box sx={{ pt: 0.5 }}>
+          <Stack direction="row" justifyContent="space-between" spacing={1}>
+            <Typography variant="caption" color="text.secondary">
+              {labels[accuracy]}
+            </Typography>
+            <Typography variant="subtitle2" color="text.primary">
+              {rate === undefined ? '—' : `${rate}%`}
+            </Typography>
+          </Stack>
+          <LinearProgress
+            aria-label={labels[accuracy]}
+            aria-hidden={rate === undefined}
+            variant="determinate"
+            value={Math.min(100, rate ?? 0)}
+            sx={{ mt: 1, height: 4, bgcolor: 'action.hover' }}
+          />
+          {attempts === 0 && (
+            <Typography variant="caption" color="text.secondary">
+              {labels.noTestsWeek}
+            </Typography>
+          )}
+        </Box>
+      )}
+      {snapshot && (
+        <Box sx={{ pt: 1, mt: 'auto' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            {labels.snapshot}
+          </Typography>
+          <Typography variant="caption" color="text.primary">
+            {labels[snapshot]}: <strong>{value(snapshot)}</strong>
+          </Typography>
+        </Box>
+      )}
     </Stack>
   );
 }

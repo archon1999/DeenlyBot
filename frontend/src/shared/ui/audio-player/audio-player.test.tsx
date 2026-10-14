@@ -38,6 +38,9 @@ it('renders deliberate accessible playback with no autoplay or progress mutation
   expect(html).toContain('Audio credit');
   expect(html).toContain('noopener noreferrer');
   expect(html).not.toContain('O‘rgandim');
+  expect(html).toContain('aria-haspopup="menu"');
+  expect(html).toContain(`${audioLabels.uz.repeat}: 1×`);
+  expect(html).not.toContain('MuiSelect-select');
 });
 it('renders no dead play buttons when verified audio is unavailable', () => {
   expect(render({ tracks: [] })).not.toContain('<audio');

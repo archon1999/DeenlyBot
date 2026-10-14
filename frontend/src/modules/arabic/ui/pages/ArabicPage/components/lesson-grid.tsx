@@ -1,22 +1,34 @@
 import type { ArabicLabels } from '../../../labels';
-import type { ArabicLesson } from '../../../../domain';
+import type { CoverTone } from 'src/shared/ui/learning-cover';
+import type { ArabicLesson, ArabicCategory } from '../../../../domain';
 
 import { Box, Card, Chip, Alert, Stack, Button, Typography } from '@mui/material';
 
 import { Iconify } from 'src/shared/ui/iconify';
+import { learningCover } from 'src/shared/ui/learning-cover';
 
-const coverColors = ['primary', 'info', 'secondary', 'primary'] as const;
+export const categoryTones: Record<ArabicCategory, CoverTone> = {
+  alphabet: 'mint',
+  quran_vocabulary: 'aqua',
+  grammar: 'lavender',
+  prayer_arabic: 'peach',
+  sarf: 'blue',
+  daily_phrases: 'rose',
+  listening: 'amber',
+};
 /** Card cover/body composition from full Minimal overview/course/course-featured.tsx. */
 export function LessonGrid({
   lessons,
   onSelect,
   labels,
   categoryTitle,
+  categories,
 }: {
   lessons: ArabicLesson[];
   onSelect: (id: number) => void;
   labels: ArabicLabels;
   categoryTitle?: string;
+  categories: { key: string; title: string }[];
 }) {
   if (!lessons.length) return <Alert severity="info">{labels.empty}</Alert>;
   return (
@@ -28,7 +40,6 @@ export function LessonGrid({
       }}
     >
       {lessons.map((lesson) => {
-        const coverColor = coverColors[Math.max(lesson.order - 1, 0) % coverColors.length];
         const preview = lesson.previewArabic.join('  ');
         return (
           <Card key={lesson.id} sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -38,14 +49,9 @@ export function LessonGrid({
                   position: 'relative',
                   overflow: 'hidden',
                   borderRadius: 2,
-                  bgcolor: `${coverColor}.lighter`,
-                  color: `${coverColor}.dark`,
+                  ...learningCover(theme, categoryTones[lesson.category]),
                   p: 2.5,
                   minHeight: 154,
-                  ...theme.applyStyles('dark', {
-                    bgcolor: `${coverColor}.darker`,
-                    color: `${coverColor}.light`,
-                  }),
                 })}
               >
                 <Box
@@ -68,10 +74,12 @@ export function LessonGrid({
                   spacing={1}
                   sx={{ position: 'relative' }}
                 >
-                  <Typography variant="overline" sx={{ opacity: 0.7 }}>
-                    {categoryTitle ?? labels[lesson.category]}
+                  <Typography variant="overline">
+                    {categoryTitle ??
+                      categories.find((value) => value.key === lesson.category)?.title ??
+                      labels[lesson.category]}
                   </Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 600, opacity: 0.6 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
                     {String(lesson.order).padStart(2, '0')}
                   </Typography>
                 </Stack>

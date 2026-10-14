@@ -1,5 +1,5 @@
 import type { ReportsLabels } from '../../../labels';
-import type { ProgressStats } from '../../../../domain';
+import type { WeeklyReport, ProgressStats } from '../../../../domain';
 
 import {
   Box,
@@ -14,7 +14,17 @@ import {
 import { Iconify } from 'src/shared/ui/iconify';
 import { MetricCard } from 'src/shared/ui/metric-card';
 
-export function ProgressCards({ stats, labels }: { stats: ProgressStats; labels: ReportsLabels }) {
+import { reportCount } from '../../../../domain';
+
+export function ProgressCards({
+  stats,
+  labels,
+  latestReport,
+}: {
+  stats: ProgressStats;
+  labels: ReportsLabels;
+  latestReport?: WeeklyReport;
+}) {
   const nameProgress = stats.namesTotal ? (stats.namesIntroduced / stats.namesTotal) * 100 : 0;
   const lessonProgress = stats.arabicLessonsTotal
     ? (stats.arabicLessonsCompleted / stats.arabicLessonsTotal) * 100
@@ -36,6 +46,14 @@ export function ProgressCards({ stats, labels }: { stats: ProgressStats; labels:
           value={`${stats.namesIntroduced} / ${stats.namesTotal}`}
           icon={<Iconify icon="solar:notebook-bold-duotone" width={28} />}
           progress={nameProgress}
+          helper={`${Math.round(nameProgress)}% ${labels.coverage}`}
+          details={[
+            { label: labels.retained, value: stats.namesLearned },
+            {
+              label: labels.remaining,
+              value: Math.max(0, stats.namesTotal - stats.namesIntroduced),
+            },
+          ]}
         />
         <MetricCard
           label={labels.arabic}
@@ -43,25 +61,47 @@ export function ProgressCards({ stats, labels }: { stats: ProgressStats; labels:
           icon={<Iconify icon="solar:notes-bold-duotone" width={28} />}
           color="info"
           progress={lessonProgress}
+          helper={`${Math.round(lessonProgress)}% ${labels.coverage}`}
+          details={[
+            { label: labels.arabic_items_total, value: stats.arabicItemsIntroduced },
+            {
+              label: labels.remaining,
+              value: Math.max(0, stats.arabicLessonsTotal - stats.arabicLessonsCompleted),
+            },
+          ]}
         />
         <MetricCard
           label={labels.qada}
           value={stats.qadaCompleted}
           icon={<Iconify icon="solar:check-circle-bold" width={28} />}
           color="success"
+          helper={labels.allTime}
+          details={[
+            {
+              label: labels.inLatestReport,
+              value: latestReport ? (reportCount(latestReport, 'prayer_completed') ?? '—') : '—',
+            },
+            { label: labels.weekEnd, value: latestReport?.periodEnd ?? '—' },
+          ]}
         />
         <MetricCard
           label={labels.due}
           value={stats.namesDue + stats.arabicDue}
           icon={<Iconify icon="solar:restart-bold" width={28} />}
           color="warning"
+          helper={labels.readyForReview}
+          details={[
+            { label: labels.nameReview, value: stats.namesDue },
+            { label: labels.arabicReview, value: stats.arabicDue },
+          ]}
         />
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
         {/* Real quiz counters in the full Minimal AppWidget radial composition. */}
         <Card
           sx={{
-            p: 3.5,
+            p: { xs: 2.5, md: 3.5 },
+            flexDirection: { xs: 'column', sm: 'row' },
             display: 'flex',
             gap: 3,
             alignItems: 'center',

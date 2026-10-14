@@ -21,7 +21,7 @@ export function ArabicPage() {
   const query = useArabic();
   const labels = useArabicLabels();
   const { language } = useLocale();
-  const [category, setCategory] = useState<ArabicCategory>('alphabet');
+  const [category, setCategory] = useState<ArabicCategory | 'all'>('all');
   const [params, setParams] = useSearchParams();
   const data = query.data;
   const rawId = params.get('lesson');
@@ -48,8 +48,8 @@ export function ArabicPage() {
               <ArabicProgress stats={data.stats} labels={labels} />
               <LearningTabs
                 value={category}
-                onChange={(value) => setCategory(value as ArabicCategory)}
-                items={data.categories}
+                onChange={(value) => setCategory(value as ArabicCategory | 'all')}
+                items={[{ key: 'all', title: labels.all }, ...data.categories]}
                 label={labels.lessons}
               />
               {data.categories.find((value) => value.key === category)?.description && (
@@ -58,10 +58,13 @@ export function ArabicPage() {
                 </Typography>
               )}
               <LessonGrid
-                lessons={data.lessons.filter((lesson) => lesson.category === category)}
+                lessons={data.lessons.filter(
+                  (lesson) => category === 'all' || lesson.category === category
+                )}
                 onSelect={setSelectedId}
                 labels={labels}
                 categoryTitle={data.categories.find((value) => value.key === category)?.title}
+                categories={data.categories}
               />
               <ArabicQuiz
                 key={language}

@@ -118,7 +118,13 @@ export function PracticeQuiz({
               }}
               disabled={creating}
               size="small"
-              sx={{ alignSelf: 'flex-start' }}
+              sx={{
+                alignSelf: 'flex-start',
+                p: 0.75,
+                gap: 0.75,
+                maxWidth: '100%',
+                '& .MuiToggleButton-root': { px: { xs: 1.5, sm: 2 }, py: 1, lineHeight: 1.5 },
+              }}
             >
               <ToggleButton value="text">{modeLabels.text}</ToggleButton>
               <ToggleButton value="listening">{modeLabels.listening}</ToggleButton>

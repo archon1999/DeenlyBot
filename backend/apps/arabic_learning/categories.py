@@ -19,9 +19,9 @@ CATEGORY_TRANSLATIONS = {
         "uz": ("Nahv", "Gap tuzilishi va foydali til faktlari."),
     },
     "prayer_arabic": {
-        "ru": ("Арабский язык намаза", "Понимание слов и выражений в молитве."),
-        "en": ("Prayer Arabic", "Understand the words and expressions of prayer."),
-        "uz": ("Namoz arabchasi", "Namozdagi so‘zlar va iboralarni tushunish."),
+        "ru": ("Изучение намаза", "Понимание слов и выражений в молитве."),
+        "en": ("Learning prayer", "Understand the words and expressions of prayer."),
+        "uz": ("Namozni o‘rganish", "Namozdagi so‘zlar va iboralarni tushunish."),
     },
     "sarf": {
         "ru": ("Сарф", "Корни, формы слов, времена и число."),

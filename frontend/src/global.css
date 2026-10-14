@@ -64,3 +64,34 @@ input[type='number']::-webkit-inner-spin-button {
   margin: 0;
   -webkit-appearance: none;
 }
+
+/* Quiet, narrow scrollbars on content, lists and picker menus; header never scrolls. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(145, 158, 171, 0.32) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: rgba(145, 158, 171, 0.32);
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(145, 158, 171, 0.5);
+}
+@supports selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  *::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}

@@ -5,13 +5,16 @@ import { useId, useRef, useState, useEffect } from 'react';
 import {
   Box,
   Link,
+  Menu,
   Alert,
   Stack,
   Button,
   Slider,
   SvgIcon,
+  Tooltip,
   MenuItem,
   TextField,
+  ButtonBase,
   Typography,
   IconButton,
   CircularProgress,
@@ -24,6 +27,7 @@ import {
   releasePlayback,
 } from 'src/shared/audio/playback';
 
+import { Iconify } from '../iconify';
 import { useAudioLabels } from './labels';
 
 function MediaIcon({ type }: { type: 'play' | 'pause' | 'previous' | 'next' }) {
@@ -64,6 +68,8 @@ export function AudioPlayer({
   const [index, setIndex] = useState(0);
   const [segmentKey, setSegmentKey] = useState('');
   const [repeat, setRepeat] = useState(1);
+  const [repeatAnchor, setRepeatAnchor] = useState<HTMLElement | null>(null);
+  const [trackAnchor, setTrackAnchor] = useState<HTMLElement | null>(null);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -169,43 +175,139 @@ export function AudioPlayer({
       component="section"
       aria-labelledby={regionId}
       aria-busy={loading}
-      sx={{ p: 2.5, borderRadius: 2, bgcolor: 'background.neutral' }}
+      sx={{ p: 1.5, borderRadius: 2, bgcolor: 'background.neutral' }}
     >
-      <Stack spacing={2}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography id={regionId} variant="subtitle2">
-              {labels.listen}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
-              {track.label}
-              {track.voice ? ` · ${track.voice}` : ''}
-            </Typography>
-          </Box>
-          <IconButton
-            color="primary"
-            aria-label={playing || loading ? labels.pause : labels.play}
-            onClick={() => {
-              if (playing || loading) {
-                wantsPlayback.current = false;
-                request.current += 1;
-                audio.current?.pause();
-                setLoading(false);
-                releasePlayback(lease.current);
-              } else {
-                completed.current = 0;
-                void play();
-              }
-            }}
-            sx={{ bgcolor: 'action.selected', width: 44, height: 44 }}
-          >
-            {loading ? (
-              <CircularProgress size={22} aria-label={labels.loading} />
-            ) : (
-              <MediaIcon type={playing ? 'pause' : 'play'} />
-            )}
-          </IconButton>
+      <Stack spacing={1}>
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Tooltip title={`${track.label}${track.voice ? ` · ${track.voice}` : ''}`}>
+            <Box component="span" sx={{ minWidth: 0, flex: 1 }}>
+              <ButtonBase
+                disabled={tracks.length < 2}
+                aria-label={`${labels.track}: ${track.label}`}
+                aria-haspopup={tracks.length > 1 ? 'menu' : undefined}
+                aria-expanded={tracks.length > 1 ? Boolean(trackAnchor) : undefined}
+                onClick={(event) => setTrackAnchor(event.currentTarget)}
+                sx={{ width: 1, minWidth: 0, textAlign: 'left', display: 'block', borderRadius: 1 }}
+              >
+                <Typography id={regionId} variant="subtitle2">
+                  {labels.listen}
+                  {tracks.length > 1 && (
+                    <Iconify
+                      icon="solar:alt-arrow-down-linear"
+                      width={14}
+                      sx={{ ml: 0.75, verticalAlign: 'middle' }}
+                    />
+                  )}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap component="div">
+                  {track.label}
+                  {track.voice ? ` · ${track.voice}` : ''}
+                </Typography>
+              </ButtonBase>
+            </Box>
+          </Tooltip>
+          <Tooltip title={playing || loading ? labels.pause : labels.play}>
+            <IconButton
+              color="primary"
+              aria-label={playing || loading ? labels.pause : labels.play}
+              onClick={() => {
+                if (playing || loading) {
+                  wantsPlayback.current = false;
+                  request.current += 1;
+                  audio.current?.pause();
+                  setLoading(false);
+                  releasePlayback(lease.current);
+                } else {
+                  completed.current = 0;
+                  void play();
+                }
+              }}
+              sx={{ bgcolor: 'action.selected', width: 44, height: 44 }}
+            >
+              {loading ? (
+                <CircularProgress size={22} aria-label={labels.loading} />
+              ) : (
+                <MediaIcon type={playing ? 'pause' : 'play'} />
+              )}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={`${labels.repeat}: ${repeat}×`}>
+            <IconButton
+              aria-label={`${labels.repeat}: ${repeat}×`}
+              aria-haspopup="menu"
+              aria-expanded={Boolean(repeatAnchor)}
+              onClick={(event) => setRepeatAnchor(event.currentTarget)}
+              sx={{ gap: 0.25, borderRadius: 1, flexShrink: 0 }}
+            >
+              <Iconify icon="solar:restart-linear" width={18} />
+              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                {repeat}×
+              </Typography>
+            </IconButton>
+          </Tooltip>
+          {track.attribution && (
+            <Tooltip title={track.attribution} describeChild>
+              <Link
+                href={track.sourceUrl || undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${labels.credit}: ${track.attribution}`}
+                tabIndex={0}
+                sx={{
+                  display: 'inline-flex',
+                  p: 1,
+                  flexShrink: 0,
+                  color: 'text.secondary',
+                  borderRadius: 1,
+                }}
+              >
+                <Iconify icon="eva:info-outline" width={20} />
+              </Link>
+            </Tooltip>
+          )}
         </Stack>
+        <Menu
+          anchorEl={repeatAnchor}
+          open={Boolean(repeatAnchor)}
+          onClose={() => setRepeatAnchor(null)}
+        >
+          {[1, 3, 5].map((value) => (
+            <MenuItem
+              key={value}
+              selected={repeat === value}
+              onClick={() => {
+                setRepeat(value);
+                completed.current = 0;
+                setRepeatAnchor(null);
+              }}
+            >
+              {labels.repeat} · {value}×
+            </MenuItem>
+          ))}
+        </Menu>
+        <Menu
+          anchorEl={trackAnchor}
+          open={Boolean(trackAnchor)}
+          onClose={() => setTrackAnchor(null)}
+        >
+          {tracks.map((value, trackIndex) => (
+            <MenuItem
+              key={value.id}
+              selected={index === trackIndex}
+              onClick={() => {
+                selectTrack(trackIndex);
+                setTrackAnchor(null);
+              }}
+            >
+              <Box>
+                <Typography variant="body2">{value.label}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {value.voice}
+                </Typography>
+              </Box>
+            </MenuItem>
+          ))}
+        </Menu>
         <audio
           ref={audio}
           src={track.url}
@@ -239,6 +341,20 @@ export function AudioPlayer({
           }}
         />
         <Stack direction="row" alignItems="center" spacing={1.5}>
+          {tracks.length > 1 && (
+            <Tooltip title={labels.previous}>
+              <span>
+                <IconButton
+                  size="small"
+                  aria-label={labels.previous}
+                  disabled={index === 0}
+                  onClick={() => selectTrack(index - 1)}
+                >
+                  <MediaIcon type="previous" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
           <Typography variant="caption" sx={{ minWidth: 30 }}>
             {audioTime(position - startAt)}
           </Typography>
@@ -259,85 +375,50 @@ export function AudioPlayer({
           <Typography variant="caption" sx={{ minWidth: 30 }}>
             {audioTime(endAt - startAt)}
           </Typography>
-        </Stack>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           {tracks.length > 1 && (
-            <TextField
-              select
-              size="small"
-              label={labels.track}
-              value={index}
-              onChange={(event) => selectTrack(Number(event.target.value))}
-              sx={{ flex: 1 }}
-            >
-              {tracks.map((value, trackIndex) => (
-                <MenuItem key={value.id} value={trackIndex}>
-                  {value.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-          {!!track.segments.length && (
-            <TextField
-              select
-              size="small"
-              label={labels.segment}
-              value={segmentKey}
-              onChange={(event) => {
-                wantsPlayback.current = false;
-                request.current += 1;
-                audio.current?.pause();
-                releasePlayback(lease.current);
-                setLoading(false);
-                setSegmentKey(event.target.value);
-                completed.current = 0;
-              }}
-              sx={{ flex: 1 }}
-            >
-              <MenuItem value="">{labels.full}</MenuItem>
-              {track.segments.map((value) => (
-                <MenuItem key={value.key} value={value.key}>
-                  {value.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          )}
-          <TextField
-            select
-            size="small"
-            label={labels.repeat}
-            value={repeat}
-            onChange={(event) => {
-              setRepeat(Number(event.target.value));
-              completed.current = 0;
-            }}
-            sx={{ minWidth: 110 }}
-          >
-            {[1, 3, 5].map((value) => (
-              <MenuItem key={value} value={value}>
-                {value}×
-              </MenuItem>
-            ))}
-          </TextField>
-          {tracks.length > 1 && (
-            <Stack direction="row" alignItems="center">
-              <IconButton
-                aria-label={labels.previous}
-                disabled={index === 0}
-                onClick={() => selectTrack(index - 1)}
-              >
-                <MediaIcon type="previous" />
-              </IconButton>
-              <IconButton
-                aria-label={labels.next}
-                disabled={index >= tracks.length - 1}
-                onClick={() => selectTrack(index + 1)}
-              >
-                <MediaIcon type="next" />
-              </IconButton>
-            </Stack>
+            <Tooltip title={labels.next}>
+              <span>
+                <IconButton
+                  size="small"
+                  aria-label={labels.next}
+                  disabled={index >= tracks.length - 1}
+                  onClick={() => selectTrack(index + 1)}
+                >
+                  <MediaIcon type="next" />
+                </IconButton>
+              </span>
+            </Tooltip>
           )}
         </Stack>
+        {!!track.segments.length && (
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+            {!!track.segments.length && (
+              <TextField
+                select
+                size="small"
+                label={labels.segment}
+                value={segmentKey}
+                onChange={(event) => {
+                  wantsPlayback.current = false;
+                  request.current += 1;
+                  audio.current?.pause();
+                  releasePlayback(lease.current);
+                  setLoading(false);
+                  setSegmentKey(event.target.value);
+                  completed.current = 0;
+                }}
+                sx={{ flex: 1 }}
+              >
+                <MenuItem value="">{labels.full}</MenuItem>
+                {track.segments.map((value) => (
+                  <MenuItem key={value.key} value={value.key}>
+                    {value.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
+          </Stack>
+        )}
         {error && (
           <Alert
             severity="warning"
@@ -356,23 +437,6 @@ export function AudioPlayer({
           >
             {labels.error}
           </Alert>
-        )}
-        {track.attribution && (
-          <Typography variant="caption" color="text.secondary">
-            {track.sourceUrl ? (
-              <Link
-                href={track.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                color="inherit"
-                aria-label={`${labels.credit}: ${track.attribution}`}
-              >
-                {track.attribution}
-              </Link>
-            ) : (
-              track.attribution
-            )}
-          </Typography>
         )}
       </Stack>
     </Box>
