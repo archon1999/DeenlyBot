@@ -54,8 +54,9 @@ https://pagespeed.web.dev/analysis/https-deenly-uz/x5vfbgic67
 
 The public reader has no JavaScript runtime, third-party widgets or required
 web fonts. The application defers the Telegram SDK, preloads its main Arabic
-and Latin fonts, and starts loading the dashboard code while checking session
-state. Existing session and signed Telegram authentication behavior is retained.
+and Latin fonts, and includes the entry dashboard in the initial dependency graph
+to avoid a serial view-code download after startup. Other feature pages remain
+lazy. Existing session and signed Telegram authentication behavior is retained.
 Gzip is enabled inside the frontend container. Fingerprinted assets retain their
 immutable cache policy. Dashboard headings and progress labels are accessible.
 
@@ -65,3 +66,16 @@ sitemap, all three library languages, a real content page, a missing content
 page, a missing arbitrary URL, private routes and raw IP fallback. Re-run
 PageSpeed on the dashboard and a public page on both device profiles; scores
 vary and must not be inferred from local build success.
+
+## Verified launch (2026-10-22)
+
+Search Console ownership was verified with the approved Google account using
+the HTML tag. Google successfully processed `/sitemap.xml` and discovered 646
+URLs. This is discovery, not confirmation that all URLs are indexed.
+
+The public learning home scored 100 performance, 100 accessibility, 100 best
+practices and 100 SEO in the mobile lab report:
+https://pagespeed.web.dev/analysis/https-deenly-uz-learn-uz/paikom459t?form_factor=mobile
+
+Production checks confirmed three-language public HTML, lesson HTML, real 404s,
+private-route noindex and raw-IP 404. CI passed SQLite and PostgreSQL tests.

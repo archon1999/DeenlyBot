@@ -80,7 +80,19 @@ export function DashboardLayout({ sx, cssVars, children, slotProps }: DashboardL
             ...(Array.isArray(slotProps?.main?.sx) ? slotProps.main.sx : [slotProps?.main?.sx]),
           ]}
         >
-          {children}
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              flexShrink: 0,
+              minHeight: {
+                xs: 'calc(100dvh - var(--layout-header-mobile-height))',
+                lg: 'calc(100dvh - var(--layout-header-desktop-height))',
+              },
+            }}
+          >
+            {children}
+          </Box>
           <Box component="footer" sx={{ px: 3, pb: 3, textAlign: 'center' }}>
             <Link href={`/learn/${language}/`} underline="hover" sx={{ display: 'inline-block', p: 1.5 }}>
               {{ uz: 'Deenly ochiq o‘quv kutubxonasi', ru: 'Открытая библиотека Deenly', en: 'Deenly public learning library' }[language]}

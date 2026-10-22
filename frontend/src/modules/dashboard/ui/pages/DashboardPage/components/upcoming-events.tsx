@@ -58,7 +58,7 @@ export function UpcomingEvents({
                   <Typography variant="subtitle1" component="h3">{event.title}</Typography>
                   <Stack direction="row" spacing={0.75} alignItems="center">
                     <Iconify
-                      icon="solar:calendar-date-bold"
+                      icon="solar:calendar-mark-linear"
                       width={16}
                       sx={{ color: 'text.disabled' }}
                     />

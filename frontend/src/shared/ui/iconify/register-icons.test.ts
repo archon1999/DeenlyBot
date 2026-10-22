@@ -24,6 +24,10 @@ describe('offline icon loading', () => {
     expect(icons.hasRegisteredIcon('solar:moon-stars-linear')).toBe(true);
     expect(icons.hasRegisteredIcon('solar:library-linear')).toBe(true);
     expect(icons.hasRegisteredIcon('solar:restart-linear')).toBe(true);
+    expect(icons.hasRegisteredIcon('solar:calendar-mark-linear')).toBe(true);
+    expect(icons.hasRegisteredIcon('solar:check-circle-linear')).toBe(true);
+    expect(icons.hasRegisteredIcon('solar:letter-linear')).toBe(true);
+    expect(icons.hasRegisteredIcon('solar:notebook-bookmark-linear')).toBe(true);
     expect(icons.hasRegisteredIcon('solar:pen-bold')).toBe(false);
     expect(spies.addCollection).toHaveBeenCalledTimes(collections);
     expect(spies.loadCatalogue).not.toHaveBeenCalled();
