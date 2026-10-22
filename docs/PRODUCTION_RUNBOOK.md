@@ -100,6 +100,38 @@ CI reports DNS activation as pending rather than claiming the public URL works
 when DNS does not resolve. Once DNS is active, public HTTPS health must pass.
 Origin health and public DNS/HTTPS are separate verification results.
 
+### Shared-host default virtual host
+
+`ops/nginx/host-default.conf` is the versioned copy of the host's
+`/etc/nginx/conf.d/00-default-host.conf` (not the frontend container's
+`ops/nginx/default.conf`). It returns HTTP 404 for unmatched hosts/IP access
+and rejects unmatched HTTPS handshakes on IPv4 and IPv6. It never redirects
+requests to Deenly. Named virtual hosts for all applications remain separate.
+
+Every deployment verifies that this exact fallback is present, included and
+passes `nginx -T` **before** preparing the release or changing containers/data.
+Deploy never overwrites shared-host configuration: if the file is missing,
+modified, symlinked or not included, deployment stops for operator review.
+Normal releases and TLS activation leave this file untouched.
+
+The forced SSH dispatcher executes `/usr/local/lib/deenly/deploy_release.py`,
+not the copy inside a release. When updating this guard, back up that installed
+helper, verify its existing contents, and install the reviewed repository copy
+there as root (mode 0755); a Git push alone does not update this trusted helper.
+
+For a fresh host or a missing-file recovery, first inspect `nginx -T` for
+existing default listeners. Do not replace another application's default host.
+With no competing defaults and the destination confirmed absent, install the
+reviewed template as root, mode 0644, at the exact path above. Run `nginx -t`
+before `systemctl reload nginx`. If validation fails, move only the newly added
+file outside `conf.d` and retain it for diagnosis; do not reload invalid config.
+Modified existing files require explicit reconciliation, not blind replacement.
+
+Afterward verify raw-IP HTTP gives 404 without a Location header, raw-IP HTTPS
+is rejected, Deenly's domain still works, and the other named virtual hosts'
+status/redirect behavior matches their pre-change baseline. Browsers may cache
+the old permanent redirect; use curl or a fresh browser session for verification.
+
 ## Publication
 
 Private env files, secrets, databases, backups, runtime artifacts and vendor ZIPs

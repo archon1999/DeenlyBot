@@ -16,6 +16,29 @@ from urllib.request import urlopen
 ROOT = Path("/home/DeenlyBot")
 SHARED = ROOT / "shared"
 COMPOSE_FILES = ("-f", "docker-compose.yml", "-f", "docker-compose.production.yml")
+HOST_DEFAULT = Path("/etc/nginx/conf.d/00-default-host.conf")
+
+
+def verify_host_nginx(release):
+    """Fail closed without rewriting shared-host configuration or touching services."""
+    expected = (release / "ops/nginx/host-default.conf").read_text(encoding="utf-8")
+    if (
+        HOST_DEFAULT.is_symlink()
+        or not HOST_DEFAULT.is_file()
+        or HOST_DEFAULT.read_text(encoding="utf-8").strip() != expected.strip()
+    ):
+        raise RuntimeError(
+            "Shared-host Nginx fallback is missing or changed; restore it using "
+            "docs/PRODUCTION_RUNBOOK.md before deploying. No Nginx files were overwritten."
+        )
+    result = subprocess.run(
+        ["/usr/sbin/nginx", "-T"], capture_output=True, text=True, timeout=30
+    )
+    if result.returncode != 0:
+        raise RuntimeError("Host Nginx configuration validation failed; deployment stopped")
+    if f"# configuration file {HOST_DEFAULT}:" not in result.stdout:
+        raise RuntimeError("Host Nginx fallback exists but is not included; deployment stopped")
+    print("Shared-host Nginx fallback verified; named virtual hosts left unchanged.")
 
 
 def run(arguments, *, cwd=None, env=None, output=None):
@@ -144,6 +167,7 @@ def main():
     private_directory(ROOT / "backups")
     with (ROOT / "backups" / ".deploy.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        verify_host_nginx(release)
         prepare_release(release, previous, args.backend_image, args.frontend_image)
         compose(release, "config", "--quiet")
         if args.build:
