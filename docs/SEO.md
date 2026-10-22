@@ -54,9 +54,10 @@ https://pagespeed.web.dev/analysis/https-deenly-uz/x5vfbgic67
 
 The public reader has no JavaScript runtime, third-party widgets or required
 web fonts. The application defers the Telegram SDK, preloads its main Arabic
-and Latin fonts, and includes the entry dashboard in the initial dependency graph
-to avoid a serial view-code download after startup. Other feature pages remain
-lazy. Existing session and signed Telegram authentication behavior is retained.
+and Latin fonts, and preloads split entry-dashboard chunks from the built HTML
+to avoid a serial view-code download after startup without enlarging the entry
+bundle. Other feature pages remain lazy. Existing session and signed Telegram
+authentication behavior is retained.
 Gzip is enabled inside the frontend container. Fingerprinted assets retain their
 immutable cache policy. Dashboard headings and progress labels are accessible.
 
@@ -72,6 +73,9 @@ vary and must not be inferred from local build success.
 Search Console ownership was verified with the approved Google account using
 the HTML tag. Google successfully processed `/sitemap.xml` and discovered 646
 URLs. This is discovery, not confirmation that all URLs are indexed.
+Google's live inspection confirmed that the public library is accessible and
+indexable, with valid breadcrumbs. Indexing requests for `/` and `/learn/uz/`
+were accepted into Google's priority crawl queue.
 
 The public learning home scored 100 performance, 100 accessibility, 100 best
 practices and 100 SEO in the mobile lab report:

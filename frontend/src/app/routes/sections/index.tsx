@@ -6,19 +6,26 @@ import { Outlet, Navigate, useLocation } from 'react-router';
 import { Container } from '@mui/material';
 
 import { useLocale } from 'src/shared/i18n';
-import { DashboardPage } from 'src/modules/dashboard';
 import { QueryState } from 'src/shared/ui/query-state';
 import { FailurePage } from 'src/shared/ui/failure-page';
 import { useSession } from 'src/modules/auth/application';
 import { LoadingScreen } from 'src/shared/ui/loading-screen';
-import { DashboardLayout } from 'src/app/layouts/dashboard/layout';
 
 const LoginPage = lazy(() => import('src/modules/auth/ui').then((m) => ({ default: m.LoginPage })));
 const ProfilePage = lazy(() =>
   import('src/modules/auth/ui').then((m) => ({ default: m.ProfilePage }))
 );
-// The entry dashboard is on the critical path. Load its code with the entry bundle;
-// private queries still mount only after the session guard permits access.
+const loadDashboardLayout = () =>
+  import('src/app/layouts/dashboard/layout').then((m) => ({ default: m.DashboardLayout }));
+const loadDashboardPage = () =>
+  import('src/modules/dashboard').then((m) => ({ default: m.DashboardPage }));
+const DashboardLayout = lazy(loadDashboardLayout);
+const DashboardPage = lazy(loadDashboardPage);
+// Download entry-view code during session discovery, without mounting private queries.
+if (typeof window !== 'undefined' && window.location.pathname === '/') {
+  void loadDashboardLayout().catch(() => undefined);
+  void loadDashboardPage().catch(() => undefined);
+}
 const NamesPage = lazy(() => import('src/modules/names').then((m) => ({ default: m.NamesPage })));
 const ArabicPage = lazy(() =>
   import('src/modules/arabic').then((m) => ({ default: m.ArabicPage }))
