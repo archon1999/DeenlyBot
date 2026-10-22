@@ -4,8 +4,10 @@ import type { MainSectionProps, HeaderSectionProps, LayoutSectionProps } from '.
 
 import { lazy, useRef, Suspense, useState, useEffect } from 'react';
 
+import { Box, Link } from '@mui/material';
 import GlobalStyles from '@mui/material/GlobalStyles';
 
+import { useLocale } from 'src/shared/i18n';
 import { usePathname } from 'src/app/routes/hooks';
 import { MotionLazy } from 'src/shared/ui/animate/motion-lazy';
 
@@ -27,6 +29,7 @@ export type DashboardLayoutProps = Pick<LayoutSectionProps, 'sx' | 'children' | 
 };
 
 export function DashboardLayout({ sx, cssVars, children, slotProps }: DashboardLayoutProps) {
+  const { language } = useLocale();
   const pathname = usePathname();
   const contentRef = useRef<HTMLElement>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -78,6 +81,11 @@ export function DashboardLayout({ sx, cssVars, children, slotProps }: DashboardL
           ]}
         >
           {children}
+          <Box component="footer" sx={{ px: 3, pb: 3, textAlign: 'center' }}>
+            <Link href={`/learn/${language}/`} underline="hover" sx={{ display: 'inline-block', p: 1.5 }}>
+              {{ uz: 'Deenly ochiq o‘quv kutubxonasi', ru: 'Открытая библиотека Deenly', en: 'Deenly public learning library' }[language]}
+            </Link>
+          </Box>
         </MainSection>
         <Suspense fallback={null}>
           {mobileOpen && <TopNavigation data={navData} onClose={() => setMobileOpen(false)} />}

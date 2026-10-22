@@ -15,12 +15,18 @@ const LoginPage = lazy(() => import('src/modules/auth/ui').then((m) => ({ defaul
 const ProfilePage = lazy(() =>
   import('src/modules/auth/ui').then((m) => ({ default: m.ProfilePage }))
 );
-const DashboardLayout = lazy(() =>
-  import('src/app/layouts/dashboard/layout').then((m) => ({ default: m.DashboardLayout }))
-);
-const DashboardPage = lazy(() =>
-  import('src/modules/dashboard').then((m) => ({ default: m.DashboardPage }))
-);
+const loadDashboardLayout = () =>
+  import('src/app/layouts/dashboard/layout').then((m) => ({ default: m.DashboardLayout }));
+const loadDashboardPage = () =>
+  import('src/modules/dashboard').then((m) => ({ default: m.DashboardPage }));
+const DashboardLayout = lazy(loadDashboardLayout);
+const DashboardPage = lazy(loadDashboardPage);
+// Fetch the initial view while the session is checked, not after several API round trips.
+// This loads code only; personal queries still wait for the authenticated session.
+if (typeof window !== 'undefined' && window.location.pathname === '/') {
+  void loadDashboardLayout().catch(() => undefined);
+  void loadDashboardPage().catch(() => undefined);
+}
 const NamesPage = lazy(() => import('src/modules/names').then((m) => ({ default: m.NamesPage })));
 const ArabicPage = lazy(() =>
   import('src/modules/arabic').then((m) => ({ default: m.ArabicPage }))

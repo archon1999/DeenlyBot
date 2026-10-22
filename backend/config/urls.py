@@ -5,6 +5,8 @@ from django.db import DatabaseError, connection
 from django.http import JsonResponse
 from django.urls import include, path
 
+from apps.content.public_views import sitemap
+
 
 def healthcheck(_request):
     try:
@@ -16,6 +18,8 @@ def healthcheck(_request):
 
 
 urlpatterns = [
+    path("learn/", include("apps.content.public_views")),
+    path("sitemap.xml", sitemap, name="public-sitemap"),
     path("api/v1/", include("apps.api.urls")),
     path("admin/", admin.site.urls),
     path("health/", healthcheck, name="healthcheck"),

@@ -17,7 +17,7 @@ export function DashboardHeading({
       useFlexGap
     >
       <Box sx={{ minWidth: 0 }}>
-        <Typography variant="h3">{labels.title}</Typography>
+        <Typography variant="h3" component="h1">{labels.title}</Typography>
         <Typography color="text.secondary" sx={{ mt: 1 }}>
           {labels.subtitle}
         </Typography>

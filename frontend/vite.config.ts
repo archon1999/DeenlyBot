@@ -9,7 +9,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: Object.fromEntries(
-      ['/api', '/auth', '/admin', '/media'].map((prefix) => [
+      ['/api', '/auth', '/admin', '/media', '/learn/', '/sitemap.xml'].map((prefix) => [
         prefix,
         { target: 'http://127.0.0.1:8001' },
       ])

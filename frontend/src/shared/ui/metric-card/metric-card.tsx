@@ -64,7 +64,7 @@ export function MetricCard({
           </Box>
         )}
       </Box>
-      <Typography variant="h4" sx={{ overflowWrap: 'anywhere' }}>
+      <Typography variant="h4" component="p" sx={{ overflowWrap: 'anywhere' }}>
         {value}
       </Typography>
       {helper && (
@@ -74,6 +74,7 @@ export function MetricCard({
       )}
       {progress !== undefined && (
         <LinearProgress
+          aria-label={label}
           color={color}
           variant="determinate"
           value={Math.max(0, Math.min(100, progress))}
@@ -96,7 +97,7 @@ export function MetricCard({
               <Typography variant="caption" color="text.secondary">
                 {detail.label}
               </Typography>
-              <Typography variant="subtitle2" sx={{ flexShrink: 0 }}>
+              <Typography variant="subtitle2" component="span" sx={{ flexShrink: 0 }}>
                 {detail.value}
               </Typography>
             </Box>

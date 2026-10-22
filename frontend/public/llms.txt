@@ -1,0 +1,16 @@
+# Deenly
+
+> Deenly is a multilingual Islamic learning platform with public reading materials in Uzbek, Russian and English, and a separate personal practice dashboard.
+
+Public pages are server-rendered HTML, require no account or JavaScript, and identify their recorded sources. Learning explanations are not fatwas. Transcriptions are learning aids, not a substitute for Arabic pronunciation instruction. Abridged meanings are labelled as summaries, not full translations. Source links do not imply endorsement of Deenly by their authors.
+
+## Public learning
+
+- [O‘zbekcha kutubxona](https://deenly.uz/learn/uz/): Names of Allah, Arabic lessons, Quran passages and duas in Uzbek.
+- [Русская библиотека](https://deenly.uz/learn/ru/): Public learning materials in Russian.
+- [English library](https://deenly.uz/learn/en/): Public learning materials in English.
+- [Sitemap](https://deenly.uz/sitemap.xml): Published material URLs and content modification dates.
+
+## Boundaries
+
+Personal profiles, learning progress, qada records, private notes, authentication endpoints and personalized reports are not public reference material. Use the /learn/ pages for citations, not account-specific dashboard URLs. No public agent API or autonomous account actions are advertised.

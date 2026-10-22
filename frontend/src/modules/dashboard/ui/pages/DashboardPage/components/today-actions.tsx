@@ -19,7 +19,7 @@ export function TodayActions({
   return (
     <Stack spacing={3}>
       <Card>
-        <CardHeader title={labels.review} subheader={labels.reviewHint} />
+        <CardHeader title={labels.review} subheader={labels.reviewHint} slotProps={{ title: { component: 'h2' } }} />
         <Stack spacing={2} divider={<Divider sx={{ borderStyle: 'dashed' }} />} sx={{ p: 3 }}>
           {!data.reviewsDue && !data.arabicReviewsDue && (
             <Typography variant="body2" color="text.secondary">
@@ -52,7 +52,7 @@ export function TodayActions({
                     <Iconify icon="solar:restart-linear" width={20} />
                   </Box>
                   <Box>
-                    <Typography variant="subtitle2">{row.label}</Typography>
+                    <Typography variant="subtitle2" component="p">{row.label}</Typography>
                     <Typography variant="caption" color="text.secondary">
                       {row.count} · {labels.review}
                     </Typography>
@@ -71,7 +71,7 @@ export function TodayActions({
             <Typography variant="overline" color="text.secondary">
               {labels.qada}
             </Typography>
-            <Typography variant="h5">
+            <Typography variant="h5" component="h2">
               {current ? labels[current.prayerType] : labels.qadaEmpty}
             </Typography>
             {current && (

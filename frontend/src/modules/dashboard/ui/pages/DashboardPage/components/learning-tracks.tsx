@@ -38,7 +38,7 @@ export function LearningTracks({
   ];
   return (
     <Card sx={{ height: '100%' }}>
-      <CardHeader title={labels.explore} sx={{ pb: 1 }} />
+      <CardHeader title={labels.explore} slotProps={{ title: { component: 'h2' } }} sx={{ pb: 1 }} />
       <Stack divider={<Divider sx={{ borderStyle: 'dashed' }} />} sx={{ p: 3 }} spacing={3}>
         {tracks.map((track) => (
           <Stack key={track.href} direction={{ xs: 'column', sm: 'row' }} spacing={2.5}>
@@ -68,8 +68,9 @@ export function LearningTracks({
                 </Typography>
                 <Chip label={`${track.count} / ${track.total}`} size="small" variant="soft" />
               </Stack>
-              <Typography variant="subtitle1">{track.subtitle}</Typography>
+              <Typography variant="subtitle1" component="h3">{track.subtitle}</Typography>
               <LinearProgress
+                aria-label={track.title}
                 variant="determinate"
                 value={track.total ? (track.count / track.total) * 100 : 0}
                 sx={{ height: 5, borderRadius: 1 }}
@@ -87,7 +88,7 @@ export function LearningTracks({
           </Stack>
         ))}
         <Stack spacing={1.5}>
-          <Typography variant="subtitle1">{labels.library}</Typography>
+          <Typography variant="subtitle1" component="h3">{labels.library}</Typography>
           <Typography variant="body2" color="text.secondary">
             {labels.libraryHint}
           </Typography>

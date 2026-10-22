@@ -8,7 +8,7 @@ import { failureLabels } from 'src/shared/ui/failure-page';
 import { getPageTitle, DocumentTitle } from './document-title';
 
 const titles = {
-  '/': ['Bugun', 'Сегодня', 'Today'],
+  '/': ['Allohning ismlari, arab tili va duolar', 'Имена Аллаха, арабский язык и дуа', 'Names of Allah, Arabic and duas'],
   '/names': ['Allohning ismlari', 'Имена Аллаха', 'Names of Allah'],
   '/arabic': ['Arab tili', 'Арабский язык', 'Arabic'],
   '/library': ['Kutubxona', 'Библиотека', 'Library'],
@@ -50,7 +50,7 @@ describe('localized browser page titles', () => {
   it('matches case-insensitive routes and trailing slashes without treating unknown prefixes as pages', () => {
     expect(getPageTitle('/NAMES/', '', 'uz')).toBe('Allohning ismlari | Deenly.uz');
     expect(getPageTitle('/login/', '?mode=register', 'en')).toBe('Create account | Deenly.uz');
-    expect(getPageTitle('/', '?mode=register', 'en')).toBe('Today | Deenly.uz');
+    expect(getPageTitle('/', '?mode=register', 'en')).toBe('Names of Allah, Arabic and duas | Deenly.uz');
   });
 
   it('ignores unrelated query parameters and accepts only the registration mode used by the page', () => {

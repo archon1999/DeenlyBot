@@ -8,7 +8,7 @@ import { failureLabels } from 'src/shared/ui/failure-page';
 
 export const pageTitleLabels = {
   uz: {
-    dashboard: 'Bugun',
+    dashboard: 'Allohning ismlari, arab tili va duolar',
     names: 'Allohning ismlari',
     arabic: 'Arab tili',
     library: 'Kutubxona',
@@ -22,7 +22,7 @@ export const pageTitleLabels = {
     notFound: failureLabels.uz.notFound,
   },
   ru: {
-    dashboard: 'Сегодня',
+    dashboard: 'Имена Аллаха, арабский язык и дуа',
     names: 'Имена Аллаха',
     arabic: 'Арабский язык',
     library: 'Библиотека',
@@ -36,7 +36,7 @@ export const pageTitleLabels = {
     notFound: failureLabels.ru.notFound,
   },
   en: {
-    dashboard: 'Today',
+    dashboard: 'Names of Allah, Arabic and duas',
     names: 'Names of Allah',
     arabic: 'Arabic',
     library: 'Library',
@@ -82,6 +82,10 @@ export function DocumentTitle() {
 
   useEffect(() => {
     document.title = getPageTitle(pathname, search, language);
+    const canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (canonical) canonical.href = `https://deenly.uz${pathname}`;
+    const robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (robots) robots.content = pathname === '/' ? 'index,follow,max-image-preview:large' : 'noindex,follow';
   }, [pathname, search, language]);
 
   return null;

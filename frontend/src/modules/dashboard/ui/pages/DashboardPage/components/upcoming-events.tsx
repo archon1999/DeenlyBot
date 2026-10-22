@@ -21,6 +21,7 @@ export function UpcomingEvents({
       <CardHeader
         title={labels.upcoming}
         subheader={labels.upcomingRange}
+        slotProps={{ title: { component: 'h2' } }}
         action={
           <Button
             component={Link}
@@ -54,7 +55,7 @@ export function UpcomingEvents({
                   }}
                 />
                 <Stack spacing={1}>
-                  <Typography variant="subtitle1">{event.title}</Typography>
+                  <Typography variant="subtitle1" component="h3">{event.title}</Typography>
                   <Stack direction="row" spacing={0.75} alignItems="center">
                     <Iconify
                       icon="solar:calendar-date-bold"

@@ -28,6 +28,7 @@ export function LoadingScreen({ portal, slots, slotsProps, sx, ...other }: Loadi
       <LoadingContent sx={sx} {...other}>
         {slots?.progress ?? (
           <LinearProgress
+            aria-label="Loading"
             color="inherit"
             sx={[
               { width: 1, maxWidth: 360 },

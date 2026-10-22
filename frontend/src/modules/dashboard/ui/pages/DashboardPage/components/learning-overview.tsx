@@ -74,7 +74,7 @@ export function LearningOverview({
             sx={{ bgcolor: 'rgba(255,255,255,.12)', color: 'inherit' }}
           />
           <Box>
-            <Typography variant="h3" sx={{ lineHeight: 1.3 }}>
+            <Typography variant="h3" component="h2" sx={{ lineHeight: 1.3 }}>
               {next ? next.transcription : labels.allNames}
             </Typography>
             <Typography sx={{ mt: 1.5, maxWidth: 500, opacity: 0.78, lineHeight: 1.8 }}>
